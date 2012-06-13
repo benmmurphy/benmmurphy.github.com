@@ -1,15 +1,15 @@
 ---
 layout: post
-title: "Rails Query Manipulation"
+title: "Abusing Dynamic Types For Fun And Profit"
 date: "2012-05-15 11:39"
 comments: true
 categories: [Rails, Security]
 ---
 
-Most Rails applications don't properly sanitise user input when passing it to queries. I'm going to use an example to illustrate this problem.
+Most Rails applications don't properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I'm going to use an example to illustrate this problem.
 
 The Scenario
-============
+------------
 
 Johnny has been tasked to add a password reset feature to his Rails application. So he adds a reset_token to his User model and a PasswordsController class to the application. When the user forgets their password they type in their email and a reset_token is generated and saved on the User model and a url containing the reset token is sent to the users email address. The url looks like `/users/1/passwords/edit?reset_token=kjksldjflskdjf`. This reset token is then checked when the user resets their password. Johnny writes the following code in the PasswordsController:
 
@@ -91,8 +91,8 @@ def update
 end
 ```
 
-Not Just Arrays
-===============
+Not Just Arrays (SQL Manipulation)
+----------------------------------
 
 If Johnny had a used the `where` function instead of `find_by_` then an attacker could have exploited it by passing in a `Hash` instead of an `Array`. 
 
@@ -123,10 +123,23 @@ User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2
   AND `users`.`id` = 2 LIMIT 1
 ```
 
-The user is able to change the token filter to a filter on a column of their choice.
+The user is able to change the token filter to a filter on a column of their choice. On previous versions of Rails this attack can be escalated
+to arbitrary SQL injection. This attack uses the [previously fixed issue](https://groups.google.com/group/rubyonrails-security/browse_thread/thread/6a1e473744bc389b) of SQL injection in table names and columns. This bug was originally not
+as serious because you would not normally let a user choose arbitrary columns or table names in a query. However, with the SQL Manipulation bug an
+attacker is now able to change table and column names to perform SQL injection.
+
+```
+params[:role_id] = {"user_details.id` = 1 or 1 = 1); -- " => 1}
+UserDetail.find(:all, :conditions => {:role_id => params[:role_id]})
+
+UserDetail Load (0.5ms)   SELECT * FROM `users` WHERE
+(`user_details`.`id` = 1 or 1 = 1); -- ` = 1)
+```
+
+This `Hash` problem is actually a security bug in rails and the rails team has released a patch for it. 
 
 Underlying Problem
-==================
+------------------
 
 The problem is developers expect the user input to be a `String` but it can also be an `Array` or a `Hash` and Rails has quite different behaviour if a `Hash` or an `Array` is passed in. The `Hash` is particularly troubling because if you have a filter on column X then a user can change it to be a filter on column Y. Example:
 
@@ -153,11 +166,41 @@ ArgumentError: Unknown key: users.id
 ```
 
 Vulnerable Code
-===============
+---------------
 
-https://github.com/thoughtbot/clearance - Possible to change any users password.
+* https://github.com/thoughtbot/clearance - Possible to change any users password.
+* Rails ( 2.3.x, < 3.2.6, <3.1.6, < 3.0.14) SQL manipulation anywhere there is use of `where()` or `find()` that takes user input. 
+* Rails (< 2.3.13, 3.0.10, 3.1.0.rc5) arbitrary SQL injection where SQL manipulation can be performed.
+
+Fixes
+-----
+* Rails has released 3.2.6 that fixes both the nil issue and SQL manipulation/injection problems with `Hash`.
+* Clearance has released 
 
 Mitigation
-==========
+----------
 
-I strongly recommend `to_s` be called on all query parameters that come from user input that you expect to be `String`s. However, this won't correctly handle user input that you want nillable because `nil.to_s` will be `"nil"`.
+It is recommended that you install the Rails patches to fix the `Hash` problem and nil problem. Also, with security sensitive code I strongly recommend all query
+parameters be coerced to the type you expect them to be. For example if you expect a parameter to be a `String` you should call `to_s` on it.
+
+Previous Work
+-------------
+
+The Devise team seem to have been aware of the general problem of users being able to send non-string parameters. They have a `ParamFilter` 
+class that forces all parameters to be `String`s. It looks like they did this because they had an injection problem with mongoid.
+
+```ruby ParamFilter https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26
+# Force keys to be string to avoid injection on mongoid related database.
+def stringify_params(conditions)
+  return conditions unless conditions.is_a?(Hash)
+  conditions.each do |k, v|
+    conditions[k] = v.to_s if param_requires_string_conversion?(v)
+  end
+end
+```
+
+Stay Tuned
+----------
+
+We only covered the issues fixed in 3.2.5 and 3.2.4 in this article. There was another variant of the `Hash` attack that was fixed in 3.2.6. I will cover 
+that in a future article and show how to exploit it.
