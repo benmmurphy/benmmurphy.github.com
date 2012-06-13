@@ -169,13 +169,12 @@ Vulnerable Code
 ---------------
 
 * https://github.com/thoughtbot/clearance - Possible to change any users password.
-* Rails ( 2.3.x, < 3.2.6, <3.1.6, < 3.0.14) SQL manipulation anywhere there is use of `where()` or `find()` that takes user input. 
-* Rails (< 2.3.13, 3.0.10, 3.1.0.rc5) arbitrary SQL injection where SQL manipulation can be performed.
+* Rails ( 2.3.x, < 3.2.6, <3.1.6, < 3.0.14) SQL manipulation/SQL injection anywhere there is use of `where()` or `find()` that takes user input. 
 
 Fixes
 -----
-* Rails has released 3.2.6 that fixes both the nil issue and SQL manipulation/injection problems with `Hash`.
-* Clearance has released 
+* Rails has [released 3.2.6](http://weblog.rubyonrails.org/2012/6/12/ann-rails-3-2-6-has-been-released/) that fixes both the nil issue and SQL manipulation/injection problems with `Hash`.
+* Clearance has released a new version [0.6.13](http://robots.thoughtbot.com/post/24197949040/clearance-0-16-3-fixes-a-password-reset-vulnerability) which fixes the problem with nil parameters
 
 Mitigation
 ----------
