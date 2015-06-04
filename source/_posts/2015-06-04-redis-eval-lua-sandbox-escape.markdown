@@ -14,7 +14,7 @@ code. This vulnerability is not new and is heavily based on
 This shouldn't pose a threat to users under the trusted Redis security model
 where only trusted users can connect to the database. However, in real
 deployments there could be databases that can be accessed by untrusted users.
-The main deployments that are vulnerable are developers machines places where
+The main deployments that are vulnerable are developers machines, places where
 redis servers can be reached via SSRF attacks and cloud hosting.
 
 # Vulnerable Deployments
