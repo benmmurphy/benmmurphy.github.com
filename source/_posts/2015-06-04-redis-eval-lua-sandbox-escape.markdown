@@ -17,6 +17,8 @@ deployments there could be databases that can be accessed by untrusted users.
 The main deployments that are vulnerable are developers machines, places where
 redis servers can be reached via SSRF attacks and cloud hosting.
 
+[Redis 2.8.21 and 3.0.2](https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ) have been released to fix this issue.
+
 # Vulnerable Deployments
 
 ## Developers Machines
@@ -174,3 +176,7 @@ via HTTP without a password are a problem waiting to happen.
 It is also possible to rename the EVAL command. If you are not using EVAL this
 is a good option but you still might be at risk of someone modifying your Redis
 data via HTTP SSRF attacks.
+
+Upgrading to [Redis 2.8.21 and 3.0.2](https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ)
+will also fix this issue but I still strongly recommend using password
+authentication on Redis systems.
