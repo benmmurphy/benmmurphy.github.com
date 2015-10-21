@@ -1,0 +1,392 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>ZDI-13-075 (2013) Java 1.7.0_09 Sandbox Bypass Via ConcurrentHashMap - Ben's Blog</title>
+  <meta name="author" content="Ben Murphy">
+
+  
+  <meta name="description" content="I&#8217;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
+there &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Ben's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-31750008-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ben's Blog</a></h1>
+  
+    <h2>Developer Musings</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:benmmurphy.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">ZDI-13-075 (2013) Java 1.7.0_09 Sandbox Bypass via ConcurrentHashMap</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true">Oct 21<span>st</span>, 2015</time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I&#8217;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
+there were 19 vulnerabilities:</p>
+
+<ul>
+<li>ZDI-13-002</li>
+<li>ZDI-13-041</li>
+<li>ZDI-13-040</li>
+<li>ZDI-13-159</li>
+<li>ZDI-13-160</li>
+<li>ZDI-13-132</li>
+<li>ZDI-13-075</li>
+<li>ZDI-13-042</li>
+<li>ZDI-13-089</li>
+<li>ZDI-13-246</li>
+<li>ZDI-13-079</li>
+<li>ZDI-13-244</li>
+<li>ZDI-13-245</li>
+<li>ZDI-13-247</li>
+<li>ZDI-13-248</li>
+<li>ZDI-13-248</li>
+<li>ZDI-14-105</li>
+<li>ZDI-14-103</li>
+<li>ZDI-14-104</li>
+</ul>
+
+
+<p>I&#8217;m going to try and publish the more interesting ones first. I find this one involving ConcurrentHashMap
+interesting because it shows how difficult Java security is to get correct. The bug was introduced by Doug Lea and
+the commit introducing the bug was also reviewed by another person. If Doug Lea can&#8217;t write secure code what hope
+is for us mere mortals.</p>
+
+<p>This bug also illustrates exploiting memory corruption by heap spraying in Java and methods to increase the reliability
+of a heap spray. Most of the vulnerabilities I found in Java did not involve heap corruption so were much more reliable.</p>
+
+<h2>Vulnerability</h2>
+
+<p>In Java 7 java.util.concurrent.ConcurrentHashMap was changed to make it go faster (?) by replacing array accesses like segments[x] to UNSAFE.getObjectVolatile(segments, SBASE + x &lt;&lt; SHIFT).</p>
+
+<p>This is the changeset from jdk source control that explains the change:</p>
+
+<pre><code>changeset:   4021:005c0c85b0de
+user:        dl
+date:        Mon Apr 18 16:10:40 2011 +0100
+summary:     7036559: ConcurrentHashMap footprint and contention improvements
+</code></pre>
+
+<p><a href="http://bugs.sun.com/view_bug.do?bug_id=7036559">Sun Bug</a></p>
+
+<p>We will use the put method from ConcurrentHashMap in our vulnerability. The method looks like:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="nd">@SuppressWarnings</span><span class="o">(</span><span class="s">&quot;unchecked&quot;</span><span class="o">)</span>
+</span><span class='line'><span class="kd">public</span> <span class="n">V</span> <span class="nf">put</span><span class="o">(</span><span class="n">K</span> <span class="n">key</span><span class="o">,</span> <span class="n">V</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">Segment</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;</span> <span class="n">s</span><span class="o">;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">value</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>        <span class="k">throw</span> <span class="k">new</span> <span class="nf">NullPointerException</span><span class="o">();</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">hash</span> <span class="o">=</span> <span class="n">hash</span><span class="o">(</span><span class="n">key</span><span class="o">);</span>
+</span><span class='line'>    <span class="kt">int</span> <span class="n">j</span> <span class="o">=</span> <span class="o">(</span><span class="n">hash</span> <span class="o">&gt;&gt;&gt;</span> <span class="n">segmentShift</span><span class="o">)</span> <span class="o">&amp;</span> <span class="n">segmentMask</span><span class="o">;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">((</span><span class="n">s</span> <span class="o">=</span> <span class="o">(</span><span class="n">Segment</span><span class="o">&lt;</span><span class="n">K</span><span class="o">,</span><span class="n">V</span><span class="o">&gt;)</span><span class="n">UNSAFE</span><span class="o">.</span><span class="na">getObject</span>          <span class="c1">// nonvolatile; recheck</span>
+</span><span class='line'>         <span class="o">(</span><span class="n">segments</span><span class="o">,</span> <span class="o">(</span><span class="n">j</span> <span class="o">&lt;&lt;</span> <span class="n">SSHIFT</span><span class="o">)</span> <span class="o">+</span> <span class="n">SBASE</span><span class="o">))</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="c1">//  in ensureSegment</span>
+</span><span class='line'>        <span class="n">s</span> <span class="o">=</span> <span class="n">ensureSegment</span><span class="o">(</span><span class="n">j</span><span class="o">);</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="n">key</span><span class="o">,</span> <span class="n">hash</span><span class="o">,</span> <span class="n">value</span><span class="o">,</span> <span class="kc">false</span><span class="o">);</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The (hash >>> segmentShift) &amp; segmentMask line ensures that the offset into the array is valid. Both of these values are final fields and are initialized in the constructor to the correct values. Unfortunately, this class is Serializable and the readObject method does s.defaultReadObject() and does no checking of these fields. This means an attacker can set these two values to whatever he wants. For example he can set segmentShift to 0 and segmentMask to 0xFFFFFFFF and then the value of hash will be unchanged by the (hash >>> segmentShift) &amp; segmentMask operation. if the value of hash is larger than the array then the JDK will try to do a memory write past the array.</p>
+
+<h2>POC Code</h2>
+
+<p>The POC code is available from <a href="https://github.com/benmmurphy/JavaPlayground/blob/master/ZDI-13-075/CHM.java">Github</a>.</p>
+
+<p>In the attack we create a serialized ConcurrentHashMap with segmentShift set to 0 and segmentMask set to 0x40000. The idea behind using 0x40000 is so the calculated offset will either be 0 or 262144. When the offset is 0 the hash map works correctly and doesn&#8217;t do anything weird. When the value is 262144 it will write past the end of the segments array and hopefully it will write where we want it to write. The class Make is used to generate the byte array for this object as well as the byte array for the Evil class I will cover later on.</p>
+
+<p>Next we deserialize this object in the sandboxed class. We then run a gc cycle and sleep. This massively improves the chance of the exploit succeeding. I suspect this is because the array that I allocate to catch the write is more likely to appear after the ConcurrentHashMap in memory and also more likely to be closer to the ConcurrentHashMap in memory. If the segs array is > (262144 * bytes) bytes away in memory from the segments array in the concurrent hash map object then the exploit will fail and probably crash when it tries to read an object and it is not properly aligned. The exploit will also fail if the segs array is located before the ConcurrentHashMap&#8217;s segment array in memory.</p>
+
+<p>Next we allocate a big array of Segs to try to catch the write that ConcurrentHashMap does. The Seg class has the exact same structure as ConcurrentHashMap.Segment does. It also contains a HEntry class which has the exact same structure as ConcurrentHashMap.HashEntry. One major difference is HEntry value field is typed EvilClassLoader while ConcurrentHashMap.HashEntry value field is typed Object.</p>
+
+<p>Next we call on the put method on ConcurrentHashMap. This will hopefully either write to the 0th segment in ConcurrentHashMap or write into our array of Segs.</p>
+
+<p>As the value to the put call we use a ClassLoader object. The hope is that will end up with a HEntry object that has a value filled in with a ClassLoader object but which is typed EvilClassLoader. Our EvilClassLoader object has a static method which can be used to define classes with arbitrary protection domains. Normally the JVM will not let you create an EvilClassLoader object because it can subvert the sandbox. There is a check in the ClassLoader&#8217;s constructor to prevent you from doing this. But if the JVM gets confused about types because of a naughty UNSAFE.putObjectVolatile then we can trick the JVM into believing a ClassLoader is really an EvilClassLoader and we can call our evil methods on the ClassLoader instance.</p>
+
+<p>If we can get an object typed EvilClassLoader then it is game over because we can load the Evil class which has a method &#8216;disable&#8217; which disables the security manager. The disable method will succeed because it does AccessController.doPrivileged and it has the AllPermission we added using the EvilClassLoader&#8217;s defineClass method.</p>
+
+<p>We repeat the calls to the put method with different String values because the jvm hashing algorithm is randomized and we can get unlucky and repeatedly get offset values of 0. I believe at the time Java was using Murmur/Murmur2 + mixed in secret key in order to protect against HashDoS and it was easier to just keep generating different strings than to try and reverse the secret key.</p>
+
+<h2>Testing</h2>
+
+<pre><code>java -Djava.security.manager CHM
+</code></pre>
+
+<p>or</p>
+
+<pre><code>appletviewer test.html
+</code></pre>
+
+<p>It will print out &#8220;user.home&#8221; system property and try to run calc.exe</p>
+
+<p>I&#8217;ve tested this with latest jdk 1.7.0_09 on windows 7 and mac osx. If you have trouble getting it working segmentMask in Make.java (need to copy bytes to INPUT field in CHM.java after making change) and the size of segs array in CHM.java can be tweaked.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ben Murphy</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true">Oct 21<span>st</span>, 2015</time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/06/09/redis-hot-patch/" title="Previous Post: Redis Hot Patch">&laquo; Redis Hot Patch</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/">ZDI-13-075 (2013) Java 1.7.0_09 Sandbox Bypass Via ConcurrentHashMap</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/01/riak-drive-by-attack/">Riak Drive by Attack</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/">Abusing Dynamic Types For Fun And Profit</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+<section>
+  <h1>Latest Tweets</h1>
+  <ul id="tweets">
+    <li class="loading">Status updating...</li>
+  </ul>
+  <script type="text/javascript">
+    $.domReady(function(){
+      getTwitterFeed("benmmurphy", 4, false);
+    });
+  </script>
+  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
+  
+    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
+  
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Ben Murphy -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'benmmurphy';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>
