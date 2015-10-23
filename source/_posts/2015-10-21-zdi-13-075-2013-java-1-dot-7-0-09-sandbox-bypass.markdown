@@ -18,7 +18,7 @@ there were 19 vulnerabilities:
 * ZDI-13-075
 * ZDI-13-042
 * ZDI-13-089
-* ZDI-13-246
+* [ZDI-13-246](/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/)
 * ZDI-13-079
 * ZDI-13-244
 * ZDI-13-245
