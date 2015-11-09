@@ -7,18 +7,19 @@ categories:
 ---
 
 I've decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
-there were 19 vulnerabilities:
+there were 20 vulnerabilities:
 
 * ZDI-13-002
 * ZDI-13-041
 * ZDI-13-040
+* [ZDI-13-XXX](blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx)
 * ZDI-13-159
 * ZDI-13-160
 * ZDI-13-132
 * ZDI-13-075
 * ZDI-13-042
 * ZDI-13-089
-* [ZDI-13-246](/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/)
+* [ZDI-13-246](/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream)
 * ZDI-13-079
 * ZDI-13-244
 * ZDI-13-245
