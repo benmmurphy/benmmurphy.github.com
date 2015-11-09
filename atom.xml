@@ -4,7 +4,7 @@
   <title><![CDATA[Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2015-10-23T17:47:01+01:00</updated>
+  <updated>2015-11-09T13:28:32+00:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -12,6 +12,202 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX]]></title>
+    <link href="http://benmmurphy.github.com/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/"/>
+    <updated>2015-11-09T10:41:00+00:00</updated>
+    <id>http://benmmurphy.github.com/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx</id>
+    <content type="html"><![CDATA[<p>This is part of a series of posts detailing Java Sandbox Bypasses that were disclosed
+between 2012-2013. You can view the other bugs by going back to the <a href="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">original post</a>.</p>
+
+<p>The last two vulnerabilities I wrote up ( <a href="http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream">ZDI-13-246</a>, <a href="blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">ZDI-13-075</a>) involved heap spraying so were not 100% reliable. Most of my sandbox bypasses against the JVM did not use memory corruption or heap spraying so were 100% reliable. These reliable sandbox bypasses fell into two main categories:</p>
+
+<p>First there were vulnerabilites that would try to create a chain from privileged code to a &#8216;dangerous&#8217; function without touching any user frames. Java uses stack walking to decide whether a dangerous function (<code>System.setSecurityManager(null)</code>, <code>Runtime.execute</code>) is allowed to proceed so if you could create a chain then you could subvert the protection.</p>
+
+<p>Second there were vulnerabilities that got access to methods in the &#8216;protected packages&#8217;. After getting access to these packages it is usually trivial to escalate out of the sandbox because it is assumed user code cannot access these methods. Access to these packages usually involved abusing reflection or parts of the JDK that used reflection but did not do so securely. This vulnerability which has existed at least since Java 5 is a good example of abusing reflection to access privileged packages.</p>
+
+<p>This bug is interesting because there is no ZDI public disclosure for it. I suspect this is because <a href="http://www.security-explorations.com/en/about.html">Adam Gowdiak</a> disclosed it to Oracle first. Looking back I also suspect I may have sniped this vulnerability from Adam Gowdiak. Gowdiak seems to have a habit of partially publicly disclosing Java bugs before they are fixed. Another bug I disclosed to ZDI, ZDI-13-079 was based on a post he made to the full disclosure mailing list and I definitely sniped this bug from him. I can&#8217;t remember the exact details about how I found this bug but I remember Gowdiak made a presentation where he said &#8216;com.sun.xml.internal.bind.v2.model.nav.Navigator&#8217; was an interesting class. It is possible that I was able to reverse the underlying bug from this.</p>
+
+<h2>Vulnerabilies</h2>
+
+<p>Three vulnerabilities are used to bypass the sandbox.</p>
+
+<ol>
+<li>Accessing Class instances in protected packages.</li>
+<li>Reading fields on interfaces in protected packages.</li>
+<li>Getting access to <code>java.lang.reflect.Method</code> for interface methods in
+protected packages.</li>
+</ol>
+
+
+<h2>Loading Classes in Protected Packages</h2>
+
+<p>The JmxMBeanServer class allows you to load classes from protected packages.
+This isn&#8217;t possible in Java 6.</p>
+
+<pre><code>server = JmxMBeanServer.newMBeanServer("", null, null, true);
+server.getMBeanInstantiator().findClass(className, (ClassLoader)null);
+</code></pre>
+
+<p>findClass in MBeanInstantiator ends up calling <code>loadClass(className, null)</code>
+which will end up performing <code>Class.forName(className)</code>.</p>
+
+<figure class='code'><figcaption><span>MBeanInstantiator.loadClass </span><a href='http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/com/sun/jmx/mbeanserver/MBeanInstantiator.java#MBeanInstantiator.loadClass%28java.lang.String%2Cjava.lang.ClassLoader%29'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">static</span> <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">loadClass</span><span class="o">(</span><span class="n">String</span> <span class="n">className</span><span class="o">,</span> <span class="n">ClassLoader</span> <span class="n">loader</span><span class="o">)</span>
+</span><span class='line'>    <span class="kd">throws</span> <span class="n">ReflectionException</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">theClass</span><span class="o">;</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">className</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">throw</span> <span class="k">new</span> <span class="nf">RuntimeOperationsException</span><span class="o">(</span><span class="k">new</span>
+</span><span class='line'>            <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&quot;The class name cannot be null&quot;</span><span class="o">),</span>
+</span><span class='line'>                          <span class="s">&quot;Exception occurred during object instantiation&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">try</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">loader</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+</span><span class='line'>            <span class="n">loader</span> <span class="o">=</span> <span class="n">MBeanInstantiator</span><span class="o">.</span><span class="na">class</span><span class="o">.</span><span class="na">getClassLoader</span><span class="o">();</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">loader</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">theClass</span> <span class="o">=</span> <span class="n">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="n">className</span><span class="o">,</span> <span class="kc">false</span><span class="o">,</span> <span class="n">loader</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">theClass</span> <span class="o">=</span> <span class="n">Class</span><span class="o">.</span><span class="na">forName</span><span class="o">(</span><span class="n">className</span><span class="o">);</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">ClassNotFoundException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="k">throw</span> <span class="k">new</span> <span class="nf">ReflectionException</span><span class="o">(</span><span class="n">e</span><span class="o">,</span>
+</span><span class='line'>        <span class="s">&quot;The MBean class could not be loaded&quot;</span><span class="o">);</span>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">theClass</span><span class="o">;</span>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h2>Reading Fields on Interfaces in Protected Packages</h2>
+
+<p>If you call <code>Proxy.getProxyClass(null, new Class[]{targetClass})</code> then the
+generated proxy class will have all the fields from the targetClass. Because
+the generated proxy class is not in a protected package user code can then call
+<code>proxyClass.getFields()</code> which will give back the <code>java.lang.reflect.Field</code> object
+and because the field is public call <code>Field#get</code> will succeed. The proxy class
+successfully loads because it is defined the root class loader.</p>
+
+<h2>Getting Access to Method objects for Interface Methods in Protected Packages</h2>
+
+<p>This uses a similar vulnerability as above. You can think of the Proxy instance
+as a machine that will convert Method objects into Method objects for a
+particular interface. If you look at <code>proxyClass.getDeclaredMethods()</code> for
+<code>com.sun.xml.internal.bind.v2.model.nav.Navigator</code> you will see something like:</p>
+
+<pre><code>public final boolean $Proxy0.isFinal(java.lang.Object)
+public final boolean $Proxy0.isArray(java.lang.Object)
+..
+</code></pre>
+
+<p>If you call <code>$Proxy0.isFinal(java.lang.Object)</code> then it will convert this Method
+into <code>Navigator.isFinal(java.lang.Object)</code> before passing it to the
+<code>InvocationHandler</code>.</p>
+
+<p>To access a <code>Method</code> on an interface in a protected package all you have to do is
+create an <code>InvocationHandler</code> that will save the Method then invoke the
+corresponding public method on the proxy class.</p>
+
+<p>Once an attacker has access to the Method then they are free to invoke it
+because the <code>Method</code> is public and no more access checks are performed.</p>
+
+<h2>Exploit</h2>
+
+<ol>
+<li>We use the JMX class loading vulnerability to load the class
+<code>"com.sun.xml.internal.bind.v2.model.nav.Navigator"</code>.</li>
+<li>We then use the field reading vulnerability to read the <code>REFLECTION</code> field from
+the interface.</li>
+<li>We then use the interface method vulnerability to read the
+<code>getDeclaredMethods(Object o)</code> method from the <code>Navigator</code> class.</li>
+</ol>
+
+
+<p>Now that we have a way of getting Methods from a protected Class
+(<code>getDeclaredMethods</code>) and a way of loading protected classes (JMX vulnerability)
+we can easily subvert the JVM sandbox. There is probably 100 ways of doing this
+because once you can execute arbitrary static methods in the protected packages
+it is game over for the JVM. We will use a technique similar to the one
+disclosed in ZDI-13-159 in order to disable the sandbox except we will modify
+it slightly so it only uses JDK 6 classes.</p>
+
+<ol>
+<li>We use <code>com.sun.xml.internal.bind.v2.ClassFactory#create(Class)</code> to create a
+<code>sun.reflect.ReflectionFactory$GetReflectionFactoryAction</code></li>
+<li>We use <code>com.sun.xml.internal.ws.api.server.InstanceResolver#createSingleton</code> to
+create an <code>InstanceResolver</code> object</li>
+<li>We use <code>com.sun.xml.internal.ws.api.server.InstanceResolver#createInvoker</code> to
+create an <code>Invoker</code> object</li>
+<li>We use <code>com.sun.xml.internal.ws.api.server.Invoker#invoke</code> to invoke
+<code>AccessController#doPrivileged</code> with the <code>PrivilegedAction</code> in step 1 to create a
+<code>ReflectionFactory</code> object.</li>
+<li>We invoke <code>sun.reflect.ReflectionFactory#newField</code> with parameters that
+correspond to the <code>Statement#acc</code> field</li>
+<li>We invoke <code>sun.reflect.ReflectionFactory#newFieldAccessor</code> with the new field
+object.</li>
+<li>We create a <code>Statement</code> object that executes <code>System.setSecurityManager(null)</code>;</li>
+<li>We invoke <code>sun.reflect.FieldAccessor#set(Object, Object)</code> with a <code>Statement</code>
+object we have created and a <code>AccessControlContext</code> that gives us all permissions</li>
+<li>We execute the <code>Statement</code> which disables the JVM security.</li>
+</ol>
+
+
+<h2>Exploit Java 6</h2>
+
+<p>We use the same technique as above but we use the XSLT class loading hack
+disclosed in ZDI-13-159 to load the classes because this works in Java 6.</p>
+
+<h2>Testing (Java 7)</h2>
+
+<p>The POC is available from <a href="https://github.com/benmmurphy/JavaPlayground/tree/master/ZDI-13-XXX/proxy_abuse7">Github</a></p>
+
+<p>java -Djava.security.manager ProxyAbuse
+or
+appletviewer test.html</p>
+
+<p>It will try and print the users home directory and execute an apple script that
+will say some stuff.</p>
+
+<h2>Testing (Java 6)</h2>
+
+<p>The POC is available from <a href="https://github.com/benmmurphy/JavaPlayground/tree/master/ZDI-13-XXX/proxy_abuse6">Github</a></p>
+
+<p>java -Djava.security.manager Harness
+or
+appletviewer test.html</p>
+
+<p>It will try and print the users home directory and execute an apple script that
+will say some stuff.</p>
+
+<h2>Fixes</h2>
+
+<p>User code probably shouldn&#8217;t be able to load Proxy Classes in the bootstrap
+class loader.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream]]></title>
@@ -432,19 +628,20 @@ say some stuff and run calc.exe.</p>
     <updated>2015-10-21T10:35:00+01:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass</id>
     <content type="html"><![CDATA[<p>I&#8217;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
-there were 19 vulnerabilities:</p>
+there were 20 vulnerabilities:</p>
 
 <ul>
 <li>ZDI-13-002</li>
 <li>ZDI-13-041</li>
 <li>ZDI-13-040</li>
+<li><a href="blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx">ZDI-13-XXX</a></li>
 <li>ZDI-13-159</li>
 <li>ZDI-13-160</li>
 <li>ZDI-13-132</li>
 <li>ZDI-13-075</li>
 <li>ZDI-13-042</li>
 <li>ZDI-13-089</li>
-<li><a href="http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/">ZDI-13-246</a></li>
+<li><a href="http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream">ZDI-13-246</a></li>
 <li>ZDI-13-079</li>
 <li>ZDI-13-244</li>
 <li>ZDI-13-245</li>
