@@ -9,7 +9,7 @@ categories:
 This is part of a series of posts detailing Java Sandbox Bypasses that were disclosed
 between 2012-2013. You can view the other bugs by going back to the [original post](/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass).
 
-The last two vulnerabilities I wrote up ( [ZDI-13-246](/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream), [ZDI-13-075](blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass)) involved heap spraying so were not 100% reliable. Most of my sandbox bypasses against the JVM did not use memory corruption or heap spraying so were 100% reliable. These reliable sandbox bypasses fell into two main categories:
+The last two vulnerabilities I wrote up ( [ZDI-13-246](/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream), [ZDI-13-075](/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass)) involved heap spraying so were not 100% reliable. Most of my sandbox bypasses against the JVM did not use memory corruption or heap spraying so were 100% reliable. These reliable sandbox bypasses fell into two main categories:
 
 First there were vulnerabilites that would try to create a chain from privileged code to a 'dangerous' function without touching any user frames. Java uses stack walking to decide whether a dangerous function (`System.setSecurityManager(null)`, `Runtime.execute`) is allowed to proceed so if you could create a chain then you could subvert the protection. 
 
