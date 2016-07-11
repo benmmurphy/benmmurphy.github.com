@@ -9,7 +9,7 @@
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="I&#8217;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
+  <meta name="description" content="I&rsquo;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
 there &hellip;">
   
 
@@ -96,14 +96,14 @@ there &hellip;">
   
 
 
-<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true">Oct 21<span>st</span>, 2015</time>
+<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>I&#8217;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
+<div class="entry-content"><p>I&rsquo;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
 there were 20 vulnerabilities:</p>
 
 <ul>
@@ -130,9 +130,9 @@ there were 20 vulnerabilities:</p>
 </ul>
 
 
-<p>I&#8217;m going to try and publish the more interesting ones first. I find this one involving ConcurrentHashMap
+<p>I&rsquo;m going to try and publish the more interesting ones first. I find this one involving ConcurrentHashMap
 interesting because it shows how difficult Java security is to get correct. The bug was introduced by Doug Lea and
-the commit introducing the bug was also reviewed by another person. If Doug Lea can&#8217;t write secure code what hope
+the commit introducing the bug was also reviewed by another person. If Doug Lea can&rsquo;t write secure code what hope
 is for us mere mortals.</p>
 
 <p>This bug also illustrates exploiting memory corruption by heap spraying in Java and methods to increase the reliability
@@ -187,17 +187,17 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
 
 <p>The POC code is available from <a href="https://github.com/benmmurphy/JavaPlayground/blob/master/ZDI-13-075/CHM.java">Github</a>.</p>
 
-<p>In the attack we create a serialized ConcurrentHashMap with segmentShift set to 0 and segmentMask set to 0x40000. The idea behind using 0x40000 is so the calculated offset will either be 0 or 262144. When the offset is 0 the hash map works correctly and doesn&#8217;t do anything weird. When the value is 262144 it will write past the end of the segments array and hopefully it will write where we want it to write. The class Make is used to generate the byte array for this object as well as the byte array for the Evil class I will cover later on.</p>
+<p>In the attack we create a serialized ConcurrentHashMap with segmentShift set to 0 and segmentMask set to 0x40000. The idea behind using 0x40000 is so the calculated offset will either be 0 or 262144. When the offset is 0 the hash map works correctly and doesn&rsquo;t do anything weird. When the value is 262144 it will write past the end of the segments array and hopefully it will write where we want it to write. The class Make is used to generate the byte array for this object as well as the byte array for the Evil class I will cover later on.</p>
 
-<p>Next we deserialize this object in the sandboxed class. We then run a gc cycle and sleep. This massively improves the chance of the exploit succeeding. I suspect this is because the array that I allocate to catch the write is more likely to appear after the ConcurrentHashMap in memory and also more likely to be closer to the ConcurrentHashMap in memory. If the segs array is > (262144 * bytes) bytes away in memory from the segments array in the concurrent hash map object then the exploit will fail and probably crash when it tries to read an object and it is not properly aligned. The exploit will also fail if the segs array is located before the ConcurrentHashMap&#8217;s segment array in memory.</p>
+<p>Next we deserialize this object in the sandboxed class. We then run a gc cycle and sleep. This massively improves the chance of the exploit succeeding. I suspect this is because the array that I allocate to catch the write is more likely to appear after the ConcurrentHashMap in memory and also more likely to be closer to the ConcurrentHashMap in memory. If the segs array is > (262144 * bytes) bytes away in memory from the segments array in the concurrent hash map object then the exploit will fail and probably crash when it tries to read an object and it is not properly aligned. The exploit will also fail if the segs array is located before the ConcurrentHashMap&rsquo;s segment array in memory.</p>
 
 <p>Next we allocate a big array of Segs to try to catch the write that ConcurrentHashMap does. The Seg class has the exact same structure as ConcurrentHashMap.Segment does. It also contains a HEntry class which has the exact same structure as ConcurrentHashMap.HashEntry. One major difference is HEntry value field is typed EvilClassLoader while ConcurrentHashMap.HashEntry value field is typed Object.</p>
 
 <p>Next we call on the put method on ConcurrentHashMap. This will hopefully either write to the 0th segment in ConcurrentHashMap or write into our array of Segs.</p>
 
-<p>As the value to the put call we use a ClassLoader object. The hope is that will end up with a HEntry object that has a value filled in with a ClassLoader object but which is typed EvilClassLoader. Our EvilClassLoader object has a static method which can be used to define classes with arbitrary protection domains. Normally the JVM will not let you create an EvilClassLoader object because it can subvert the sandbox. There is a check in the ClassLoader&#8217;s constructor to prevent you from doing this. But if the JVM gets confused about types because of a naughty UNSAFE.putObjectVolatile then we can trick the JVM into believing a ClassLoader is really an EvilClassLoader and we can call our evil methods on the ClassLoader instance.</p>
+<p>As the value to the put call we use a ClassLoader object. The hope is that will end up with a HEntry object that has a value filled in with a ClassLoader object but which is typed EvilClassLoader. Our EvilClassLoader object has a static method which can be used to define classes with arbitrary protection domains. Normally the JVM will not let you create an EvilClassLoader object because it can subvert the sandbox. There is a check in the ClassLoader&rsquo;s constructor to prevent you from doing this. But if the JVM gets confused about types because of a naughty UNSAFE.putObjectVolatile then we can trick the JVM into believing a ClassLoader is really an EvilClassLoader and we can call our evil methods on the ClassLoader instance.</p>
 
-<p>If we can get an object typed EvilClassLoader then it is game over because we can load the Evil class which has a method &#8216;disable&#8217; which disables the security manager. The disable method will succeed because it does AccessController.doPrivileged and it has the AllPermission we added using the EvilClassLoader&#8217;s defineClass method.</p>
+<p>If we can get an object typed EvilClassLoader then it is game over because we can load the Evil class which has a method &lsquo;disable&rsquo; which disables the security manager. The disable method will succeed because it does AccessController.doPrivileged and it has the AllPermission we added using the EvilClassLoader&rsquo;s defineClass method.</p>
 
 <p>We repeat the calls to the put method with different String values because the jvm hashing algorithm is randomized and we can get unlucky and repeatedly get offset values of 0. I believe at the time Java was using Murmur/Murmur2 + mixed in secret key in order to protect against HashDoS and it was easier to just keep generating different strings than to try and reverse the secret key.</p>
 
@@ -211,9 +211,9 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
 <pre><code>appletviewer test.html
 </code></pre>
 
-<p>It will print out &#8220;user.home&#8221; system property and try to run calc.exe</p>
+<p>It will print out &ldquo;user.home&rdquo; system property and try to run calc.exe</p>
 
-<p>I&#8217;ve tested this with latest jdk 1.7.0_09 on windows 7 and mac osx. If you have trouble getting it working segmentMask in Make.java (need to copy bytes to INPUT field in CHM.java after making change) and the size of segs array in CHM.java can be tweaked.</p>
+<p>I&rsquo;ve tested this with latest jdk 1.7.0_09 on windows 7 and mac osx. If you have trouble getting it working segmentMask in Make.java (need to copy bytes to INPUT field in CHM.java after making change) and the size of segs array in CHM.java can be tweaked.</p>
 </div>
 
 
@@ -236,7 +236,7 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
   
 
 
-<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true">Oct 21<span>st</span>, 2015</time>
+<time datetime="2015-10-21T10:35:00+01:00" pubdate data-updated="true"></time>
       
 
 
@@ -281,6 +281,10 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -296,28 +300,7 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -331,7 +314,7 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

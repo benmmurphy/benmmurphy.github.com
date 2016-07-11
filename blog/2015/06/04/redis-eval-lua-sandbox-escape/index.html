@@ -97,7 +97,7 @@ Peter &hellip;">
   
 
 
-<time datetime="2015-06-04T09:52:00+01:00" pubdate data-updated="true">Jun 4<span>th</span>, 2015</time>
+<time datetime="2015-06-04T09:52:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -106,10 +106,10 @@ Peter &hellip;">
 
 <div class="entry-content"><p>It is possible to break out of the Lua sandbox in Redis and execute arbitrary
 code. This vulnerability is not new and is heavily based on
-<a href="https://www.youtube.com/watch?v=OSMOTDLrBCQ">Peter Cawley&#8217;s work</a> with Lua bytecode
+<a href="https://www.youtube.com/watch?v=OSMOTDLrBCQ">Peter Cawley&rsquo;s work</a> with Lua bytecode
 <a href="https://gist.github.com/corsix/6575486">type confusion</a>.</p>
 
-<p>This shouldn&#8217;t pose a threat to users under the trusted Redis security model
+<p>This shouldn&rsquo;t pose a threat to users under the trusted Redis security model
 where only trusted users can connect to the database. However, in real
 deployments there could be databases that can be accessed by untrusted users.
 The main deployments that are vulnerable are developers machines, places where
@@ -184,7 +184,7 @@ Even with DNS rebinding it might not be possible to read the response because
 the response is not valid HTTP.</p>
 
 <p>However, reading the response is not necessary because you can package a super generic
-exploit that checks the result of the redis.call(&#8220;INFO&#8221;) command and then
+exploit that checks the result of the redis.call(&ldquo;INFO&rdquo;) command and then
 launches a OS/architecture specific payload.</p>
 
 <h2>SSRF attacks</h2>
@@ -197,15 +197,15 @@ the body which might not often be possible depending on how the body is encoded.
 
 <p>This will only effect providers where people running arbitrary code from the
 Redis process is not part of their threat model. The major players in this area
-look like they are using sandboxing. For example the pids returned by &#8216;INFO&#8217; on
+look like they are using sandboxing. For example the pids returned by &lsquo;INFO&rsquo; on
 heroku are very low &lt;10 which indicates they are running the Redis servers in
 containers. You can already run arbitrary code in containers via dynos on Heroku
 so running arbitrary code in a Redis container is probably not useful for an
 attacker. Amazon Elasticcache also looks like it uses linux containers.</p>
 
-<p>Similarily, it looks like Microsoft&#8217;s hosted Redis solution runs in an
-isolated VM. Redis &#8216;INFO&#8217; returns a virtual os string and it takes ~15
-minutes to launch an instance. If MS aren&#8217;t running in an isolated VM then the
+<p>Similarily, it looks like Microsoft&rsquo;s hosted Redis solution runs in an
+isolated VM. Redis &lsquo;INFO&rsquo; returns a virtual os string and it takes ~15
+minutes to launch an instance. If MS aren&rsquo;t running in an isolated VM then the
 15 minute startup time is very weird.</p>
 
 <p>This will be a problem if a hosting provider runs a whole bunch of redis
@@ -220,7 +220,7 @@ created three very useful lua exploit primitives that make exploitation easy.</p
 
 <p>First is a way of reading the Value contained in a TValue struct. This allows
 reading the pointer value from a lua tagged value. Some pointer values are
-already public (using tostring) but there doesn&#8217;t seem to be a way to get the
+already public (using tostring) but there doesn&rsquo;t seem to be a way to get the
 pointer value for a lua string so this is useful.</p>
 
 <p>Second is a way of reading 8 bytes from an arbitrary memory address.</p>
@@ -244,11 +244,11 @@ pointer mangling protections so this is quite easy to corrupt.</p>
 
 <p>On linux the rip and rsp (and rbp) values are mangled. However, if you have full
 read access to the memory you can reverse the secret cookie value to corrupt
-the values. Also, linux prevents you from longjmp&#8217;ing to an invalid stack frame
+the values. Also, linux prevents you from longjmp'ing to an invalid stack frame
 (ie: the heap) but you can longjump to point the stack inside the longjump
 buffer then pivot the stack into the heap. This is not really necessary if you
-don&#8217;t care about corrupting the stack and crashing the redis process but if you
-longjump and don&#8217;t corrupt the stack then you can resume normal execution of
+don&rsquo;t care about corrupting the stack and crashing the redis process but if you
+longjump and don&rsquo;t corrupt the stack then you can resume normal execution of
 redis after the exploit has finished running.</p>
 
 <h1>Exploitability</h1>
@@ -303,7 +303,7 @@ authentication on Redis systems.</p>
   
 
 
-<time datetime="2015-06-04T09:52:00+01:00" pubdate data-updated="true">Jun 4<span>th</span>, 2015</time>
+<time datetime="2015-06-04T09:52:00+01:00" pubdate data-updated="true"></time>
       
 
 
@@ -348,6 +348,10 @@ authentication on Redis systems.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -363,28 +367,7 @@ authentication on Redis systems.</p>
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -398,7 +381,7 @@ authentication on Redis systems.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

@@ -96,7 +96,7 @@ between 2012-2013. You can view the other bugs by going back to &hellip;">
   
 
 
-<time datetime="2015-11-09T10:41:00+00:00" pubdate data-updated="true">Nov 9<span>th</span>, 2015</time>
+<time datetime="2015-11-09T10:41:00+00:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -108,11 +108,11 @@ between 2012-2013. You can view the other bugs by going back to the <a href="/bl
 
 <p>The last two vulnerabilities I wrote up ( <a href="/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream">ZDI-13-246</a>, <a href="/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">ZDI-13-075</a>) involved heap spraying so were not 100% reliable. Most of my sandbox bypasses against the JVM did not use memory corruption or heap spraying so were 100% reliable. These reliable sandbox bypasses fell into two main categories:</p>
 
-<p>First there were vulnerabilites that would try to create a chain from privileged code to a &#8216;dangerous&#8217; function without touching any user frames. Java uses stack walking to decide whether a dangerous function (<code>System.setSecurityManager(null)</code>, <code>Runtime.execute</code>) is allowed to proceed so if you could create a chain then you could subvert the protection.</p>
+<p>First there were vulnerabilites that would try to create a chain from privileged code to a &lsquo;dangerous&rsquo; function without touching any user frames. Java uses stack walking to decide whether a dangerous function (<code>System.setSecurityManager(null)</code>, <code>Runtime.execute</code>) is allowed to proceed so if you could create a chain then you could subvert the protection.</p>
 
-<p>Second there were vulnerabilities that got access to methods in the &#8216;protected packages&#8217;. After getting access to these packages it is usually trivial to escalate out of the sandbox because it is assumed user code cannot access these methods. Access to these packages usually involved abusing reflection or parts of the JDK that used reflection but did not do so securely. This vulnerability which has existed at least since Java 5 is a good example of abusing reflection to access privileged packages.</p>
+<p>Second there were vulnerabilities that got access to methods in the &lsquo;protected packages&rsquo;. After getting access to these packages it is usually trivial to escalate out of the sandbox because it is assumed user code cannot access these methods. Access to these packages usually involved abusing reflection or parts of the JDK that used reflection but did not do so securely. This vulnerability which has existed at least since Java 5 is a good example of abusing reflection to access privileged packages.</p>
 
-<p>This bug is interesting because there is no ZDI public disclosure for it. I suspect this is because <a href="http://www.security-explorations.com/en/about.html">Adam Gowdiak</a> disclosed it to Oracle first. Looking back I also suspect I may have sniped this vulnerability from Adam Gowdiak. Gowdiak seems to have a habit of partially publicly disclosing Java bugs before they are fixed. Another bug I disclosed to ZDI, ZDI-13-079 was based on a post he made to the full disclosure mailing list and I definitely sniped this bug from him. I can&#8217;t remember the exact details about how I found this bug but I remember Gowdiak made a presentation where he said &#8216;com.sun.xml.internal.bind.v2.model.nav.Navigator&#8217; was an interesting class. It is possible that I was able to reverse the underlying bug from this.</p>
+<p>This bug is interesting because there is no ZDI public disclosure for it. I suspect this is because <a href="http://www.security-explorations.com/en/about.html">Adam Gowdiak</a> disclosed it to Oracle first. Looking back I also suspect I may have sniped this vulnerability from Adam Gowdiak. Gowdiak seems to have a habit of partially publicly disclosing Java bugs before they are fixed. Another bug I disclosed to ZDI, ZDI-13-079 was based on a post he made to the full disclosure mailing list and I definitely sniped this bug from him. I can&rsquo;t remember the exact details about how I found this bug but I remember Gowdiak made a <a href="http://www.security-explorations.com/materials/se-2012-01-devoxx.pdf">presentation</a> where he said &lsquo;com.sun.xml.internal.bind.v2.model.nav.Navigator&rsquo; was an interesting class. It is possible that I was able to reverse the underlying bug from this.</p>
 
 <h2>Vulnerabilies</h2>
 
@@ -129,7 +129,7 @@ protected packages.</li>
 <h2>Loading Classes in Protected Packages</h2>
 
 <p>The JmxMBeanServer class allows you to load classes from protected packages.
-This isn&#8217;t possible in Java 6.</p>
+This isn&rsquo;t possible in Java 6.</p>
 
 <pre><code>server = JmxMBeanServer.newMBeanServer("", null, null, true);
 server.getMBeanInstantiator().findClass(className, (ClassLoader)null);
@@ -138,7 +138,7 @@ server.getMBeanInstantiator().findClass(className, (ClassLoader)null);
 <p>findClass in MBeanInstantiator ends up calling <code>loadClass(className, null)</code>
 which will end up performing <code>Class.forName(className)</code>.</p>
 
-<figure class='code'><figcaption><span>MBeanInstantiator.loadClass </span><a href='http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/com/sun/jmx/mbeanserver/MBeanInstantiator.java#MBeanInstantiator.loadClass%28java.lang.String%2Cjava.lang.ClassLoader%29'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>MBeanInstantiator.loadClass</span><a href='http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/com/sun/jmx/mbeanserver/MBeanInstantiator.java#MBeanInstantiator.loadClass%28java.lang.String%2Cjava.lang.ClassLoader%29'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -289,7 +289,7 @@ will say some stuff.</p>
 
 <h2>Fixes</h2>
 
-<p>User code probably shouldn&#8217;t be able to load Proxy Classes in the bootstrap
+<p>User code probably shouldn&rsquo;t be able to load Proxy Classes in the bootstrap
 class loader.</p>
 </div>
 
@@ -313,7 +313,7 @@ class loader.</p>
   
 
 
-<time datetime="2015-11-09T10:41:00+00:00" pubdate data-updated="true">Nov 9<span>th</span>, 2015</time>
+<time datetime="2015-11-09T10:41:00+00:00" pubdate data-updated="true"></time>
       
 
 
@@ -337,6 +337,8 @@ class loader.</p>
         <a class="basic-alignment left" href="/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/" title="Previous Post: ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream">&laquo; ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream</a>
       
       
+        <a class="basic-alignment right" href="/blog/2016/07/11/rails-webconsole-dns-rebinding/" title="Next Post: Rails Webconsole DNS Rebinding">Rails Webconsole DNS Rebinding &raquo;</a>
+      
     </p>
   </footer>
 </article>
@@ -356,6 +358,10 @@ class loader.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -371,28 +377,7 @@ class loader.</p>
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -406,7 +391,7 @@ class loader.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

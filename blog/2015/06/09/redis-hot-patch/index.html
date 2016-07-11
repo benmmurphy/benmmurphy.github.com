@@ -95,7 +95,7 @@
   
 
 
-<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true">Jun 9<span>th</span>, 2015</time>
+<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -106,17 +106,17 @@
 <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script></div>
 
 
-<p>The arbitrary read and arbitrary write from the <a href="https://gist.github.com/corsix/6575486">Lua vulnerability</a> makes it quite easy to patch the vulnerability itself. I have written a proof of concept that should work on OSX Yosemite with any of the Homebrew bottled Redis versions that are vulnerable. It should also work on Mavericks and other compiled versions of Redis but I have not tested it on them (on versions other than Yosemite it may crash if the format of the long jump buffer is not the same). The Hot Patcher looks for the instruction <a href="https://github.com/antirez/redis/commit/fdf9d455098f54f7666c702ae464e6ea21e25411#diff-9486950b94262375ea8951aecc31b93cL498">cmp r15, 0x1b</a> and replaces it with &#8216;cmpq rsp,0x1b&#8217;. This comparison should never be true because the stack typically lives around 0x7fxxxxxxxxxxxxxx and will never reach such a low address. However, looking for this exact instruction makes the patcher quite brittle and it may not work on Redis versions compiled with different compilers.</p>
+<p>The arbitrary read and arbitrary write from the <a href="https://gist.github.com/corsix/6575486">Lua vulnerability</a> makes it quite easy to patch the vulnerability itself. I have written a proof of concept that should work on OSX Yosemite with any of the Homebrew bottled Redis versions that are vulnerable. It should also work on Mavericks and other compiled versions of Redis but I have not tested it on them (on versions other than Yosemite it may crash if the format of the long jump buffer is not the same). The Hot Patcher looks for the instruction <a href="https://github.com/antirez/redis/commit/fdf9d455098f54f7666c702ae464e6ea21e25411#diff-9486950b94262375ea8951aecc31b93cL498">cmp r15, 0x1b</a> and replaces it with &lsquo;cmpq rsp,0x1b&rsquo;. This comparison should never be true because the stack typically lives around 0x7fxxxxxxxxxxxxxx and will never reach such a low address. However, looking for this exact instruction makes the patcher quite brittle and it may not work on Redis versions compiled with different compilers.</p>
 
 <p>The Hot Patcher proof of concept uses the CSRF technique to run so you can run it directly from your browser. However, before running it you should understand:</p>
 
 <ul>
-<li>it may crash your Redis server and you may lose your data (i think the exploit used to crash when the shellcode was allocated across two pages and i was only mprotect&#8217;ing the bottom page. but if this wasn&#8217;t the cause of the crash then the exploit is still flakey. or there could still be bugs.)</li>
+<li>it may crash your Redis server and you may lose your data (i think the exploit used to crash when the shellcode was allocated across two pages and i was only mprotect'ing the bottom page. but if this wasn&rsquo;t the cause of the crash then the exploit is still flakey. or there could still be bugs.)</li>
 <li>it might not crash your Redis server but may silently corrupt the data in your Redis server</li>
 <li>you MUST own the Redis server running on 127.0.0.1:6379</li>
 <li>this is not a full fix for the Lua sandbox bypass and only disables the loading of bytecode</li>
 <li>it does not permanently patch Redis and the patch will be reverted after a restart</li>
-<li>it is probably better to write a script for GDB to do the live patching. But I don&#8217;t understand GDB scripting :(</li>
+<li>it is probably better to write a script for GDB to do the live patching. But I don&rsquo;t understand GDB scripting :(</li>
 </ul>
 
 
@@ -576,19 +576,19 @@
 
 <p>You can test if the patcher worked by running the following from redis-cli:</p>
 
-<figure class='code'><figcaption><span>Example Output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>eval "return tostring(loadstring(string.dump(function() end)))" 0</span></code></pre></td></tr></table></div></figure>
 
 
 <p>If you are vulnerable it will return:</p>
 
-<figure class='code'><figcaption><span>Example Output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>"function: 0x7fdcd8439df0"</span></code></pre></td></tr></table></div></figure>
 
 
 <p>If the patch has been applied it will return:</p>
 
-<figure class='code'><figcaption><span>Example Output</span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class=''><span class='line'>"nil"</span></code></pre></td></tr></table></div></figure>
 
 
@@ -2796,7 +2796,7 @@
   
 
 
-<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true">Jun 9<span>th</span>, 2015</time>
+<time datetime="2015-06-09T09:53:00+01:00" pubdate data-updated="true"></time>
       
 
 
@@ -2841,6 +2841,10 @@
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -2856,28 +2860,7 @@
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -2891,7 +2874,7 @@
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

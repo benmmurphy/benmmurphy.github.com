@@ -9,7 +9,7 @@
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="Most Rails applications don&#8217;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this &hellip;">
+  <meta name="description" content="Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -95,14 +95,14 @@
   
 
 
-<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true">May 15<span>th</span>, 2012</time>
+<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>Most Rails applications don&#8217;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&#8217;m going to use an example to illustrate this problem.</p>
+<div class="entry-content"><p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
 
 <h2>The Scenario</h2>
 
@@ -137,14 +137,13 @@
 
 <p>Johnny reproduces the problem on his machine and notices it is is doing the following query:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">reset_token</span><span class="sb">` IS NULL LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
+</span><span class='line'>  AND `users`.`reset_token` IS NULL LIMIT 1</span></code></pre></td></tr></table></div></figure>
 
 
-<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn&#8217;t requested a password reset. He updates the code in PasswordController to the following:</p>
+<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn&rsquo;t requested a password reset. He updates the code in PasswordController to the following:</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -185,15 +184,14 @@
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>Mary tries her trick again but it doesn&#8217;t work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
+<p>Mary tries her trick again but it doesn&rsquo;t work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
 
 <p>Johnny reproduces the problem on his machine and sees it doing the same query:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">reset_token</span><span class="sb">` IS NULL LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
+</span><span class='line'>  AND `users`.`reset_token` IS NULL LIMIT 1</span></code></pre></td></tr></table></div></figure>
 
 
 <p>Johnny is completely stumped as to how nil.blank? could be false. He adds some logging and finds the <code>params[:reset_token]</code> is actually an array containing a nil element: <code>[nil]</code>. He decides to fix the problem by calling <code>to_s</code> on the query parameters.</p>
@@ -280,11 +278,10 @@
 
 <p>For example Mary could of sent the url <code>/users/2/passwords/edit?reset_token[users.id]=2</code>. The query then performed would have been:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">2</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 2 </span>
-</span><span class='line'><span class="sb">  AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="nb">id</span><span class="sb">` = 2 LIMIT 1</span>
-</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
+</span><span class='line'>  AND `users`.`id` = 2 LIMIT 1</span></code></pre></td></tr></table></div></figure>
 
 
 <p>The user is able to change the token filter to a filter on a column of their choice. On previous versions of Rails this attack can be escalated
@@ -292,17 +289,16 @@ to arbitrary SQL injection. This attack uses the <a href="https://groups.google.
 as serious because you would not normally let a user choose arbitrary columns or table names in a query. However, with the SQL Manipulation bug an
 attacker is now able to change table and column names to perform SQL injection.</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">params</span><span class="o">[</span><span class="ss">:role_id</span><span class="o">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;user_details.id` = 1 or 1 = 1); -- &quot;</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">}</span>
-</span><span class='line'><span class="no">UserDetail</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="ss">:all</span><span class="p">,</span> <span class="ss">:conditions</span> <span class="o">=&gt;</span> <span class="p">{</span><span class="ss">:role_id</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:role_id</span><span class="o">]</span><span class="p">})</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>params[:role_id] = {"user_details.id` = 1 or 1 = 1); -- " =&gt; 1}
+</span><span class='line'>UserDetail.find(:all, :conditions =&gt; {:role_id =&gt; params[:role_id]})
 </span><span class='line'>
-</span><span class='line'><span class="no">UserDetail</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">5</span><span class="n">ms</span><span class="p">)</span>   <span class="no">SELECT</span> <span class="o">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span>
-</span><span class='line'><span class="p">(</span><span class="sb">`user_details`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 or 1 = 1); -- `</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'>UserDetail Load (0.5ms)   SELECT * FROM `users` WHERE
+</span><span class='line'>(`user_details`.`id` = 1 or 1 = 1); -- ` = 1)</span></code></pre></td></tr></table></div></figure>
 
 
 <p>This <code>Hash</code> problem is actually a security bug in rails and the rails team has released a patch for it.</p>
@@ -349,7 +345,7 @@ attacker is now able to change table and column names to perform SQL injection.<
 <h2>Vulnerable Code</h2>
 
 <ul>
-<li>https://github.com/thoughtbot/clearance - Possible to change any users password.</li>
+<li><a href="https://github.com/thoughtbot/clearance">https://github.com/thoughtbot/clearance</a> - Possible to change any users password.</li>
 <li>Rails ( 2.3.x, &lt; 3.2.6, &lt;3.1.6, &lt; 3.0.14) SQL manipulation/SQL injection anywhere there is use of <code>where()</code> or <code>find()</code> that takes user input.</li>
 </ul>
 
@@ -372,7 +368,7 @@ parameters be coerced to the type you expect them to be. For example if you expe
 <p>The Devise team seem to have been aware of the general problem of users being able to send non-string parameters. They have a <code>ParamFilter</code>
 class that forces all parameters to be <code>String</code>s. It looks like they did this because they had an injection problem with mongoid.</p>
 
-<figure class='code'><figcaption><span>ParamFilter </span><a href='https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span>ParamFilter</span><a href='https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -415,12 +411,12 @@ that in a future article and show how to exploit it.</p>
   
 
 
-<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true">May 15<span>th</span>, 2012</time>
+<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true"></time>
       
 
 <span class="categories">
   
-    <a class='category' href='/blog/categories/rails/'>Rails</a>, <a class='category' href='/blog/categories/security/'>Security</a>
+    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/security/'>security</a>
   
 </span>
 
@@ -464,6 +460,10 @@ that in a future article and show how to exploit it.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
@@ -479,28 +479,7 @@ that in a future article and show how to exploit it.</p>
         <a href="/blog/2015/06/09/redis-hot-patch/">Redis Hot Patch</a>
       </li>
     
-      <li class="post">
-        <a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a>
-      </li>
-    
   </ul>
-</section>
-
-
-<section>
-  <h1>Latest Tweets</h1>
-  <ul id="tweets">
-    <li class="loading">Status updating...</li>
-  </ul>
-  <script type="text/javascript">
-    $.domReady(function(){
-      getTwitterFeed("benmmurphy", 4, false);
-    });
-  </script>
-  <script src="/javascripts/twitter.js" type="text/javascript"> </script>
-  
-    <a href="http://twitter.com/benmmurphy" class="twitter-follow-button" data-show-count="false">Follow @benmmurphy</a>
-  
 </section>
 
 
@@ -514,7 +493,7 @@ that in a future article and show how to exploit it.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Ben Murphy -
+  Copyright &copy; 2016 - Ben Murphy -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

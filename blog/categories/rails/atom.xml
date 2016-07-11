@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Rails | Ben's Blog]]></title>
+  <title><![CDATA[Category: rails | Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2015-11-09T13:36:40+00:00</updated>
+  <updated>2016-07-11T09:35:56+01:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -18,172 +18,125 @@
     <link href="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/"/>
     <updated>2012-05-15T11:39:00+01:00</updated>
     <id>http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit</id>
-    <content type="html"><![CDATA[<p>Most Rails applications don't properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I'm going to use an example to illustrate this problem.</p>
+    <content type="html"><![CDATA[<p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
 
 <h2>The Scenario</h2>
 
 <p>Johnny has been tasked to add a password reset feature to his Rails application. So he adds a reset_token to his User model and a PasswordsController class to the application. When the user forgets their password they type in their email and a reset_token is generated and saved on the User model and a url containing the reset token is sent to the users email address. The url looks like <code>/users/1/passwords/edit?reset_token=kjksldjflskdjf</code>. This reset token is then checked when the user resets their password. Johnny writes the following code in the PasswordsController:</p>
 
-<p>``` ruby<br/>
-def update
-  @user = User.find_by_id_and_reset_token(</p>
+<pre><code class="ruby  ">def update
+  @user = User.find_by_id_and_reset_token(
+                 params[:user_id], params[:reset_token])
 
-<pre><code>             params[:user_id], params[:reset_token])
-</code></pre>
-
-<p>  if @user.update_password(params[:user][:password])</p>
-
-<pre><code>redirect_to(url_after_update)
-</code></pre>
-
-<p>  else</p>
-
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-</code></pre>
-
-<p>  end
+  if @user.update_password(params[:user][:password])
+    redirect_to(url_after_update)
+  else
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+  end
 end
-```</p>
+</code></pre>
 
 <p>Johnny deploys this new feature to the staging environment and Mary is given the task to test it. Now Mary is quite clever and checks what happens if she removes the reset_token parameter from the url and changes the user id. She visits the url <code>/users/2/passwords/edit</code> and finds that she can change the password for any user that has not requested their password to be reset. She raises this as a critical bug.</p>
 
 <p>Johnny reproduces the problem on his machine and notices it is is doing the following query:</p>
 
-<p><code>
-User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2
+<pre><code>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
   AND `users`.`reset_token` IS NULL LIMIT 1
-</code></p>
-
-<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn't requested a password reset. He updates the code in PasswordController to the following:</p>
-
-<p>``` ruby
-def update</p>
-
-<p>  if params[:reset_token].blank?</p>
-
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-return
 </code></pre>
 
-<p>  end</p>
+<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn&rsquo;t requested a password reset. He updates the code in PasswordController to the following:</p>
 
-<p>  @user = User.find_by_id_and_reset_token(</p>
+<pre><code class="ruby ">def update
 
-<pre><code>             params[:user_id], params[:reset_token])
-</code></pre>
+  if params[:reset_token].blank?
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+    return
+  end
 
-<p>  if @user.update_password(params[:user][:password])</p>
+  @user = User.find_by_id_and_reset_token(
+                 params[:user_id], params[:reset_token])
 
-<pre><code>redirect_to(url_after_update)
-</code></pre>
-
-<p>  else</p>
-
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-</code></pre>
-
-<p>  end
+  if @user.update_password(params[:user][:password])
+    redirect_to(url_after_update)
+  else
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+  end
 end
-```</p>
+</code></pre>
 
-<p>Mary tries her trick again but it doesn't work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
+<p>Mary tries her trick again but it doesn&rsquo;t work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
 
 <p>Johnny reproduces the problem on his machine and sees it doing the same query:</p>
 
-<p><code>
-User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2
+<pre><code>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
   AND `users`.`reset_token` IS NULL LIMIT 1
-</code></p>
+</code></pre>
 
 <p>Johnny is completely stumped as to how nil.blank? could be false. He adds some logging and finds the <code>params[:reset_token]</code> is actually an array containing a nil element: <code>[nil]</code>. He decides to fix the problem by calling <code>to_s</code> on the query parameters.</p>
 
-<p>``` ruby
-def update</p>
+<pre><code class="ruby ">def update
 
-<p>  if params[:reset_token].blank?</p>
+  if params[:reset_token].blank?
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+    return
+  end
 
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-return
-</code></pre>
+  @user = User.find_by_id_and_reset_token(
+                 params[:user_id].to_s, params[:reset_token].to_s)
 
-<p>  end</p>
-
-<p>  @user = User.find_by_id_and_reset_token(</p>
-
-<pre><code>             params[:user_id].to_s, params[:reset_token].to_s)
-</code></pre>
-
-<p>  if @user.update_password(params[:user][:password])</p>
-
-<pre><code>redirect_to(url_after_update)
-</code></pre>
-
-<p>  else</p>
-
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-</code></pre>
-
-<p>  end
+  if @user.update_password(params[:user][:password])
+    redirect_to(url_after_update)
+  else
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+  end
 end
-```</p>
+</code></pre>
 
 <h2>Not Just Arrays (SQL Manipulation)</h2>
 
 <p>If Johnny had a used the <code>where</code> function instead of <code>find_by_</code> then an attacker could have exploited it by passing in a <code>Hash</code> instead of an <code>Array</code>.</p>
 
-<p>``` ruby
-def update</p>
+<pre><code class="ruby">def update
 
-<p>  if params[:reset_token].blank?</p>
+  if params[:reset_token].blank?
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+    return
+  end
 
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-return
-</code></pre>
+  @user = User.where(:id =&gt; params[:user_id], :reset_token =&gt; params[:reset_token]).limit(1).first
 
-<p>  end</p>
-
-<p>  @user = User.where(:id => params[:user_id], :reset_token => params[:reset_token]).limit(1).first</p>
-
-<p>  if @user.update_password(params[:user][:password])</p>
-
-<pre><code>redirect_to(url_after_update)
-</code></pre>
-
-<p>  else</p>
-
-<pre><code>flash_failure_after_update
-render :template =&gt; 'passwords/edit'
-</code></pre>
-
-<p>  end
+  if @user.update_password(params[:user][:password])
+    redirect_to(url_after_update)
+  else
+    flash_failure_after_update
+    render :template =&gt; 'passwords/edit'
+  end
 end
-```</p>
+</code></pre>
 
 <p>For example Mary could of sent the url <code>/users/2/passwords/edit?reset_token[users.id]=2</code>. The query then performed would have been:</p>
 
-<p><code>
-User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2
+<pre><code>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
   AND `users`.`id` = 2 LIMIT 1
-</code></p>
+</code></pre>
 
 <p>The user is able to change the token filter to a filter on a column of their choice. On previous versions of Rails this attack can be escalated
 to arbitrary SQL injection. This attack uses the <a href="https://groups.google.com/group/rubyonrails-security/browse_thread/thread/6a1e473744bc389b">previously fixed issue</a> of SQL injection in table names and columns. This bug was originally not
 as serious because you would not normally let a user choose arbitrary columns or table names in a query. However, with the SQL Manipulation bug an
 attacker is now able to change table and column names to perform SQL injection.</p>
 
-<p><code>``
-params[:role_id] = {"user_details.id</code> = 1 or 1 = 1); -- " => 1}
-UserDetail.find(:all, :conditions => {:role_id => params[:role_id]})</p>
+<pre><code>params[:role_id] = {"user_details.id` = 1 or 1 = 1); -- " =&gt; 1}
+UserDetail.find(:all, :conditions =&gt; {:role_id =&gt; params[:role_id]})
 
-<p>UserDetail Load (0.5ms)   SELECT * FROM <code>users</code> WHERE
-(<code>user_details</code>.<code>id</code> = 1 or 1 = 1); -- ` = 1)
-```</p>
+UserDetail Load (0.5ms)   SELECT * FROM `users` WHERE
+(`user_details`.`id` = 1 or 1 = 1); -- ` = 1)
+</code></pre>
 
 <p>This <code>Hash</code> problem is actually a security bug in rails and the rails team has released a patch for it.</p>
 
@@ -191,38 +144,29 @@ UserDetail.find(:all, :conditions => {:role_id => params[:role_id]})</p>
 
 <p>The problem is developers expect the user input to be a <code>String</code> but it can also be an <code>Array</code> or a <code>Hash</code> and Rails has quite different behaviour if a <code>Hash</code> or an <code>Array</code> is passed in. The <code>Hash</code> is particularly troubling because if you have a filter on column X then a user can change it to be a filter on column Y. Example:</p>
 
-<p><code>`` ruby
-irb(main):001:0&gt; User.where(:id =&gt; 1, :confirmation_token =&gt; "foo")
-  User Load (0.4ms)  SELECT</code>users<code>.* FROM</code>users<code>WHERE</code>users<code>.</code>id` = 1</p>
-
-<pre><code>AND `users`.`confirmation_token` = 'foo'
+<pre><code class="ruby">irb(main):001:0&gt; User.where(:id =&gt; 1, :confirmation_token =&gt; "foo")
+  User Load (0.4ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 1 
+    AND `users`.`confirmation_token` = 'foo'
+=&gt; []
 </code></pre>
 
-<p>=> []
-```</p>
-
-<p><code>``ruby
-irb(main):002:0&gt; User.where(:id =&gt; 1, :confirmation_token =&gt; {"users.id" =&gt; "1"})
-  User Load (0.4ms)  SELECT</code>users<code>.* FROM</code>users<code>WHERE</code>users<code>.</code>id` = 1</p>
-
-<pre><code>AND `users`.`id` = 1
+<pre><code class="ruby">irb(main):002:0&gt; User.where(:id =&gt; 1, :confirmation_token =&gt; {"users.id" =&gt; "1"})
+  User Load (0.4ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 1 
+    AND `users`.`id` = 1
+=&gt; [#&lt;User id: 1, email: "benmmurphy@gmail.com", encrypted_password: "f1fcf94f12b17a447e1c4a98ba2bae934aacabb7", salt: "abcb87e3031102d110cf87734d39d8a1e6d8c03e", confirmation_token: nil, remember_token: "975dc5fb3524a90f1a6aff4c1a111d2cd8bfcc50", created_at: "2012-05-15 08:28:01", updated_at: "2012-05-15 08:28:01"&gt;]
 </code></pre>
-
-<p>=> [#<User id: 1, email: "benmmurphy@gmail.com", encrypted_password: "f1fcf94f12b17a447e1c4a98ba2bae934aacabb7", salt: "abcb87e3031102d110cf87734d39d8a1e6d8c03e", confirmation_token: nil, remember_token: "975dc5fb3524a90f1a6aff4c1a111d2cd8bfcc50", created_at: "2012-05-15 08:28:01", updated_at: "2012-05-15 08:28:01">]
-```</p>
 
 <p>This <code>Hash</code> trick only seems to work on <code>where</code> filterings and not <code>find_by</code> methods:</p>
 
-<p><code>ruby
-irb(main):006:0&gt; User.find_by_id_and_confirmation_token(1, {"users.id" =&gt; "1"})
+<pre><code class="ruby">irb(main):006:0&gt; User.find_by_id_and_confirmation_token(1, {"users.id" =&gt; "1"})
 ArgumentError: Unknown key: users.id
   from /Users/benmurphy/.rbenv/versions/1.9.2-p290/lib/ruby/gems/1.9.1/gems/activesupport-3.2.2/lib/active_support/core_ext/hash/keys.rb:44:in `block in assert_valid_keys'
-</code></p>
+</code></pre>
 
 <h2>Vulnerable Code</h2>
 
 <ul>
-<li>https://github.com/thoughtbot/clearance - Possible to change any users password.</li>
+<li><a href="https://github.com/thoughtbot/clearance">https://github.com/thoughtbot/clearance</a> - Possible to change any users password.</li>
 <li>Rails ( 2.3.x, &lt; 3.2.6, &lt;3.1.6, &lt; 3.0.14) SQL manipulation/SQL injection anywhere there is use of <code>where()</code> or <code>find()</code> that takes user input.</li>
 </ul>
 
@@ -245,20 +189,14 @@ parameters be coerced to the type you expect them to be. For example if you expe
 <p>The Devise team seem to have been aware of the general problem of users being able to send non-string parameters. They have a <code>ParamFilter</code>
 class that forces all parameters to be <code>String</code>s. It looks like they did this because they had an injection problem with mongoid.</p>
 
-<p>```ruby ParamFilter https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26</p>
-
-<h1>Force keys to be string to avoid injection on mongoid related database.</h1>
-
-<p>def stringify_params(conditions)
+<pre><code class="ruby ParamFilter https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26"># Force keys to be string to avoid injection on mongoid related database.
+def stringify_params(conditions)
   return conditions unless conditions.is_a?(Hash)
-  conditions.each do |k, v|</p>
-
-<pre><code>conditions[k] = v.to_s if param_requires_string_conversion?(v)
-</code></pre>
-
-<p>  end
+  conditions.each do |k, v|
+    conditions[k] = v.to_s if param_requires_string_conversion?(v)
+  end
 end
-```</p>
+</code></pre>
 
 <h2>Stay Tuned</h2>
 
