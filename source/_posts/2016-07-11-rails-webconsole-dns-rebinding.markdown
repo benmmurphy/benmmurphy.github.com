@@ -25,7 +25,7 @@ I have a website that simulates this attack. If you visit this website on OSX an
 
 1. create a new rails project with rails new demo
 2. cd demo; rails server
-3. go to http://www.dnsrebinder.net/ in your browser -> you will be asked to enter username/password which is rebinder:1FLkAavKIRADAhDs1t6UuQ . You will need to do this twice. Obviously, in a real scenario it won't require this user interaction.
+3. go to http://www.dnsrebinder.net/ in your browser 
 4. You will have to wait about 60-80 seconds and if you are running OSX it will pop a calculator. If you are running something else it won't do anything useful :(. You can monitor what is happening in Chrome Developer tools. If you see a request that generates a 404 this is evidence that the DNS rebinding was successful.
 
 It might not work if your router or upstream DNS provider is filtering private ip ranges in DNS lookups. So you might have to set your DNS server to point to 8.8.8.8 (google DNS).
