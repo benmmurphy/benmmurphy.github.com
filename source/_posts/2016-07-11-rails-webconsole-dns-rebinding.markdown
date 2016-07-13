@@ -36,3 +36,8 @@ Mitigations
 1. Remove webconsole gem from your Gemfile.
 2. Use pow.cx which hosts your Rails application under the .dev domain namespace and do not spawn Rails applications using the 'rails server' command.
 3. Use a DNS server that applies DNS rebinding filtering. It is important that it filters 127.0.0.0/8 and the IPV6 local addresses. In particular Rails5 Puma only binds to the IPV6 local address under OSX.
+
+Update
+------
+
+The same vulnerability effect the [better errors gem](https://github.com/charliesome/better_errors). Thanks to [@mikeycgto](https://twitter.com/mikeycgto) for the pointer.
