@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://benmmurphy.github.com/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/</loc>
+    <lastmod>2017-01-31T09:00:00+00:00</lastmod>
+  </url>
+  <url>
     <loc>http://benmmurphy.github.com/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos/</loc>
     <lastmod>2017-01-06T21:02:05+00:00</lastmod>
   </url>
