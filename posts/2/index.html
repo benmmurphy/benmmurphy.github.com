@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Abusing Dynamic Types For Fun And Profit - Ben's Blog</title>
+  <title>Ben's Blog</title>
   <meta name="author" content="Ben Murphy">
 
   
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit">
+  <link rel="canonical" href="http://benmmurphy.github.com/posts/2">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -74,12 +74,15 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div>
-<article class="hentry" role="article">
+      <div class="blog-index">
   
+  
+  
+    <article>
+      
   <header>
     
-      <h1 class="entry-title">Abusing Dynamic Types for Fun and Profit</h1>
+      <h1 class="entry-title"><a href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/">Abusing Dynamic Types for Fun and Profit</a></h1>
     
     
       <p class="meta">
@@ -102,7 +105,7 @@
   </header>
 
 
-<div class="entry-content"><p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
+  <div class="entry-content"><p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
 
 <h2>The Scenario</h2>
 
@@ -390,69 +393,20 @@ class that forces all parameters to be <code>String</code>s. It looks like they 
 <p>We only covered the issues fixed in 3.2.5 and 3.2.4 in this article. There was another variant of the <code>Hash</code> attack that was fixed in 3.2.6. I will cover
 that in a future article and show how to exploit it.</p>
 </div>
-
-
-  <footer>
-    <p class="meta">
-      
   
-
-<span class="byline author vcard">Posted by <span class="fn">Ben Murphy</span></span>
-
-      
-
-
-
-
-
-
-
-
   
 
 
-<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true"></time>
-      
-
-<span class="categories">
+    </article>
   
-    <a class='category' href='/blog/categories/rails/'>rails</a>, <a class='category' href='/blog/categories/security/'>security</a>
-  
-</span>
-
-
-    </p>
+  <div class="pagination">
     
-      <div class="sharing">
-  
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/" >Tweet</a>
-  
-  
-  <div class="g-plusone" data-size="medium"></div>
-  
-  
-    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
-  
-</div>
-
+    <a href="/blog/archives">Blog Archives</a>
     
-    <p class="meta">
-      
-      
-        <a class="basic-alignment right" href="/blog/2013/09/01/riak-drive-by-attack/" title="Next Post: Riak Drive by Attack">Riak Drive by Attack &raquo;</a>
-      
-    </p>
-  </footer>
-</article>
-
-  <section>
-    <h1>Comments</h1>
-    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a class="next" href="1">Newer &rarr;</a>
+    
+  </div>
 </div>
-  </section>
-
-</div>
-
 <aside class="sidebar">
   
     <section>
@@ -489,7 +443,6 @@ that in a future article and show how to exploit it.</p>
   
 </aside>
 
-
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -504,10 +457,7 @@ that in a future article and show how to exploit it.</p>
       var disqus_shortname = 'benmmurphy';
       
         
-        // var disqus_developer = 1;
-        var disqus_identifier = 'http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/';
-        var disqus_url = 'http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/';
-        var disqus_script = 'embed.js';
+        var disqus_script = 'count.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

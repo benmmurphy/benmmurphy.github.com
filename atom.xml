@@ -4,7 +4,7 @@
   <title><![CDATA[Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2017-01-31T10:53:06+00:00</updated>
+  <updated>2017-03-07T10:27:10+00:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -12,6 +12,23 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[DTrace Division by Zero]]></title>
+    <link href="http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/"/>
+    <updated>2017-03-07T09:55:03+00:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero</id>
+    <content type="html"><![CDATA[<p>For some background check John Regehr&rsquo;s <a href="http://blog.regehr.org/archives/887">excellent post</a> on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter that runs inside the kernel on both Illumos and OSX. Before it was <a href="https://github.com/joyent/illumos-joyent/commit/8a5ff7873220bd2725876b6ef7fdd2bceff60dd3">patched</a> in Illumos it was possible to create an expression to divide INT_MIN by -1 and this would cause the kernel to crash.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v/-1)}'
+</span><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v%-1)}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is still an issue in OSX. I emailed them a month ago along with links to other DTrace issues that have been fixed in Illumos and not OSX and haven&rsquo;t heard back. Since this is not really a security issue I&rsquo;m posting it here. You need root in order to trigger the DTrace division by zero and if you have root you can already reboot the machine :/. You also need root to trigger all of the other issues.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Local Privilege Escalation in Illumos via /proc]]></title>

