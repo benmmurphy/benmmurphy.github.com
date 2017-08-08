@@ -1,0 +1,17 @@
+---
+layout: post
+title: "Avalon Fonix/Grabyo Meta Snapshot"
+date: 2017-08-08 21:41:33 +0100
+comments: true
+categories: Avalon
+---
+
+For those that don't know [Avalon](https://boardgamegeek.com/boardgame/128882/resistance-avalon) (or [The Resistance](https://boardgamegeek.com/boardgame/41114/resistance)) is a board game where a 'good' team which consist of the majority of players attempt to pass 3 missions while an 'evil' team which consist of a minority of the players try to sabotage them. The 'evil' team achieves this objective by convincing the other players to put them on missions and then failing the missions. The 'evil' team is in a better position to do this because they know who all the other 'evil' players are and can coordinate their voting or influence discussions to achieve their objective. On the other hand the 'good' team is generally in the dark about the identity of the other players except for a few important exceptions.
+
+We generally play 10 players with the Commander (Merlin), Bodyguard (Percival), Deep Cover (Mordred) and False Commander (Morgana) characters. The Commander knows who all the evil characters are except for Deep Cover. The Bodyguard knows who the Commander and False Commander is but doesn't know which is which. We also use the Lady of the Lake which allows its holder after the second round to find out which team another play is on privately. The person being interrogtated cannot lie but the person receiving the information can lie or tell the truth to the rest of the table. The Lady of the Lake token then passes to the player that was interrogated and they get an opportuntity to use it on the next round and so forth. We also sometimes play only vanilla resistance without characters but with plot cards.
+
+Because we play a lot with each other some interesting behaviour has emerged. Firstly, we have a house technique which allows multiple evil players to coordinate failing a mission. For example in a 3 player mission with two evil players it would be a disaster if both evil players put in a fail card. So it has evolved that the person who proposed the mission or the first evil player clockwise (the first evil player to pick the next mission) from the person who proposed the mission is responsible for failing the mission. This removes a lot of deductive ability from the good team because it is difficult to assume that there is only 1 evil player in a mission if it fails.
+
+We have also noticed that a lot of missions in the first round will be forced to the last pick because in the ten player games it is very difficult to get 6 good people (all the good people) to coordinate on picking a team. So generally the only way a mission passes before the last pick in the first round is because of evil shenanigans so good people are wary of voting for a team they are not on. This often means the position of the players has a large effect on the outcome of the game.
+
+A lot of the games lately are being won by the good team but then the win is being overturned by the assassin. In the latest game the Assassin was not picked because they provided the most useful information to the table, they actually did very little, but rather because they made no incorrect statements. The evil team is often very focused on finding the Commander even to the detriment of getting a clean win.
