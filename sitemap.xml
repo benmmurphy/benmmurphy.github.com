@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/</loc>
+    <lastmod>2018-06-01T19:46:30+01:00</lastmod>
+  </url>
+  <url>
     <loc>http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/</loc>
     <lastmod>2017-08-08T21:48:48+01:00</lastmod>
   </url>
@@ -53,10 +57,10 @@
     <lastmod>2012-05-15T11:39:00+01:00</lastmod>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/blog/archives/</loc>
+    <loc>http://benmmurphy.github.com/</loc>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/</loc>
+    <loc>http://benmmurphy.github.com/blog/archives/</loc>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/categories/rails/</loc>

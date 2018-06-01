@@ -1,0 +1,417 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>FSync DB Lock Contention - Ben's Blog</title>
+  <meta name="author" content="Ben Murphy">
+
+  
+  <meta name="description" content="Lets say you have a table in a database that you are using to keep track of a
+counter value. So something like: 1
+2
+3
+4
+5
+6
+Column | Type | Modifiers &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="Ben's Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-31750008-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Ben's Blog</a></h1>
+  
+    <h2>Developer Musings</h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:benmmurphy.github.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">FSync DB Lock Contention</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2018-06-01T19:46:30+01:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Lets say you have a table in a database that you are using to keep track of a
+counter value. So something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Column |  Type   | Modifiers
+</span><span class='line'>--------+---------+-----------
+</span><span class='line'> id     | integer | not null
+</span><span class='line'> count  | integer | not null
+</span><span class='line'>Indexes:
+</span><span class='line'>    "test_pkey" PRIMARY KEY, btree (id)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you have lots of connections updating values doing the query: <code>update
+test set count = count + 1 where id = $1;</code> then on postgresql you should have
+very decent performance as long as the id values do not overlap too much. Even
+though postgresql needs to fsync the WAL to disk for each commit it is able to
+amortise the cost of this over many commits if the commits start to queue up
+because fsyncing is slow. For example the WAL fsyncs might be something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 2
+</span><span class='line'>update test set count = count + 1 where id = 3
+</span><span class='line'>..
+</span><span class='line'>update test set count = count + 1 where id = 100
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 101
+</span><span class='line'>update test set count = count + 1 where id = 102
+</span><span class='line'>..
+</span><span class='line'>update test set count = count + 1 where id = 200
+</span><span class='line'>FSYNC WAL</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, if the id values overlap and in the worst case if they are all the same
+then not only do you have a problem with lock contention but you also have a
+problem with serializing all of the fsyncs. Postgresql and presumably any sane
+RDBMS will hold a write lock on the updated records until the transaction is
+durable. So you end up getting all the WAL fsyncs done in a completely serial
+order.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Before the land of SSDs this would be absolutely horrible. If you are paying
+6ms for a fsync then it completely destroys your throughput (166 fsync/s). But
+now with SSDs (or previously with battery backed caches) the fsync cost is much
+lower so this is less of an issue. For example with Amazon EBS I see fsync cost
+of around 0.5ms (2000 fsync/s) and i3 NVME performance of ~0.05ms
+(20000 fsync/s).</p>
+
+<p>Is it possible for an RDBMs to fix this fsync problem? So when you think about
+it an RDBMs could drop all the locks a transaction has once it has decided that
+nothing except for the WAL fsync would prevent it from committing. This would
+kind of work because another transaction that would modify the same row would
+be dependent on the previous WAL segments committing before it could commit.
+However, this opens up a big consistency hole in the way clients interact
+with the database. For example you could see this happening:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TX1: BEGIN;
+</span><span class='line'>TX1: insert into test(id) values(1);
+</span><span class='line'>TX1: COMMIT;
+</span><span class='line'>
+</span><span class='line'>&lt;TX1 not fsync'd>
+</span><span class='line'>
+</span><span class='line'>TX2: BEGIN;
+</span><span class='line'>TX2: insert into test(id) values(1);
+</span><span class='line'>
+</span><span class='line'>&lt;instead of blocking here for TX1 to commit it raises unique error>
+</span><span class='line'>
+</span><span class='line'>DB: POWER FAILURE &lt;TX1 is never committed></span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we see a case where the second transaction observes data in the database
+that was not durable. It might think that because the record is already in
+the database it can do something else with an external system and then we end
+up having a problem. This particular case is also weird because the transaction
+gets in a state where it can&rsquo;t be committed. If you successfully commit a
+transaction that has touched non-durable records then all the reads are safe
+because the records would now be durable after the commit. But a transaction
+with an error is not committable so you would also need to add a weird hook
+where a rollback (or implicit rollback) might have to wait for other
+transactions to fsync before returning to the client.</p>
+
+<p>Also, transactions that did not modify data would normally have a no-op commit
+but if they were shown non-durable records they would need to potentially wait
+to commit.</p>
+
+<p>Basically, it could kind of work as long as all transactions waited for a
+successful commit/rollback before acting on any data they read from the DB
+but this does not seem realistic.</p>
+
+<p>If you look at VoltDB it looks like they only let you do transactions inside
+stored procedures. I&rsquo;ve also seen a comment along the lines that they do batch
+commits. Considering, they are single threaded presumably they handle a bunch
+of transactions on the thread and add them to a queue that is fsynced in batches
+then the results from the stored procedures are sent back to the client. This
+presumably removes any of the consistency problems you have from a system
+that has external transactions where non-durable reads can escape.</p>
+
+<p>If you want to play around with postgresql to see what effects wal fsync delay
+has I have a LD_PRELOAD library that will add 10s to every fsync.
+<a href="https://github.com/benmmurphy/wal_delayer">wal_delayer</a></p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Ben Murphy</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2018-06-01T19:46:30+01:00" pubdate data-updated="true"></time>
+      
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2017/08/08/mechanically-solving-avalon/" title="Previous Post: Mechanically Solving Avalon">&laquo; Mechanically Solving Avalon</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2018/06/01/fsync-db-lock-contention/">FSync DB Lock Contention</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/08/08/mechanically-solving-avalon/">Mechanically Solving Avalon</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/03/07/dtrace-division-by-zero/">DTrace Division by Zero</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/">Local Privilege Escalation in Illumos via /proc</a>
+      </li>
+    
+  </ul>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2018 - Ben Murphy -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'benmmurphy';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

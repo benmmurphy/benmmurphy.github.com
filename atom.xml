@@ -4,7 +4,7 @@
   <title><![CDATA[Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2017-08-08T22:51:26+01:00</updated>
+  <updated>2018-06-01T21:10:02+01:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -12,6 +12,160 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[FSync DB Lock Contention]]></title>
+    <link href="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/"/>
+    <updated>2018-06-01T19:46:30+01:00</updated>
+    <id>http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention</id>
+    <content type="html"><![CDATA[<p>Lets say you have a table in a database that you are using to keep track of a
+counter value. So something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>Column |  Type   | Modifiers
+</span><span class='line'>--------+---------+-----------
+</span><span class='line'> id     | integer | not null
+</span><span class='line'> count  | integer | not null
+</span><span class='line'>Indexes:
+</span><span class='line'>    "test_pkey" PRIMARY KEY, btree (id)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you have lots of connections updating values doing the query: <code>update
+test set count = count + 1 where id = $1;</code> then on postgresql you should have
+very decent performance as long as the id values do not overlap too much. Even
+though postgresql needs to fsync the WAL to disk for each commit it is able to
+amortise the cost of this over many commits if the commits start to queue up
+because fsyncing is slow. For example the WAL fsyncs might be something like:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 2
+</span><span class='line'>update test set count = count + 1 where id = 3
+</span><span class='line'>..
+</span><span class='line'>update test set count = count + 1 where id = 100
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 101
+</span><span class='line'>update test set count = count + 1 where id = 102
+</span><span class='line'>..
+</span><span class='line'>update test set count = count + 1 where id = 200
+</span><span class='line'>FSYNC WAL</span></code></pre></td></tr></table></div></figure>
+
+
+<p>However, if the id values overlap and in the worst case if they are all the same
+then not only do you have a problem with lock contention but you also have a
+problem with serializing all of the fsyncs. Postgresql and presumably any sane
+RDBMS will hold a write lock on the updated records until the transaction is
+durable. So you end up getting all the WAL fsyncs done in a completely serial
+order.</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL
+</span><span class='line'>update test set count = count + 1 where id = 1
+</span><span class='line'>FSYNC WAL</span></code></pre></td></tr></table></div></figure>
+
+
+<p>Before the land of SSDs this would be absolutely horrible. If you are paying
+6ms for a fsync then it completely destroys your throughput (166 fsync/s). But
+now with SSDs (or previously with battery backed caches) the fsync cost is much
+lower so this is less of an issue. For example with Amazon EBS I see fsync cost
+of around 0.5ms (2000 fsync/s) and i3 NVME performance of ~0.05ms
+(20000 fsync/s).</p>
+
+<p>Is it possible for an RDBMs to fix this fsync problem? So when you think about
+it an RDBMs could drop all the locks a transaction has once it has decided that
+nothing except for the WAL fsync would prevent it from committing. This would
+kind of work because another transaction that would modify the same row would
+be dependent on the previous WAL segments committing before it could commit.
+However, this opens up a big consistency hole in the way clients interact
+with the database. For example you could see this happening:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>TX1: BEGIN;
+</span><span class='line'>TX1: insert into test(id) values(1);
+</span><span class='line'>TX1: COMMIT;
+</span><span class='line'>
+</span><span class='line'>&lt;TX1 not fsync'd>
+</span><span class='line'>
+</span><span class='line'>TX2: BEGIN;
+</span><span class='line'>TX2: insert into test(id) values(1);
+</span><span class='line'>
+</span><span class='line'>&lt;instead of blocking here for TX1 to commit it raises unique error>
+</span><span class='line'>
+</span><span class='line'>DB: POWER FAILURE &lt;TX1 is never committed></span></code></pre></td></tr></table></div></figure>
+
+
+<p>Here we see a case where the second transaction observes data in the database
+that was not durable. It might think that because the record is already in
+the database it can do something else with an external system and then we end
+up having a problem. This particular case is also weird because the transaction
+gets in a state where it can&rsquo;t be committed. If you successfully commit a
+transaction that has touched non-durable records then all the reads are safe
+because the records would now be durable after the commit. But a transaction
+with an error is not committable so you would also need to add a weird hook
+where a rollback (or implicit rollback) might have to wait for other
+transactions to fsync before returning to the client.</p>
+
+<p>Also, transactions that did not modify data would normally have a no-op commit
+but if they were shown non-durable records they would need to potentially wait
+to commit.</p>
+
+<p>Basically, it could kind of work as long as all transactions waited for a
+successful commit/rollback before acting on any data they read from the DB
+but this does not seem realistic.</p>
+
+<p>If you look at VoltDB it looks like they only let you do transactions inside
+stored procedures. I&rsquo;ve also seen a comment along the lines that they do batch
+commits. Considering, they are single threaded presumably they handle a bunch
+of transactions on the thread and add them to a queue that is fsynced in batches
+then the results from the stored procedures are sent back to the client. This
+presumably removes any of the consistency problems you have from a system
+that has external transactions where non-durable reads can escape.</p>
+
+<p>If you want to play around with postgresql to see what effects wal fsync delay
+has I have a LD_PRELOAD library that will add 10s to every fsync.
+<a href="https://github.com/benmmurphy/wal_delayer">wal_delayer</a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Mechanically Solving Avalon]]></title>
