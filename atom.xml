@@ -4,7 +4,7 @@
   <title><![CDATA[Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2018-06-01T21:10:02+01:00</updated>
+  <updated>2018-06-07T10:56:56+01:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -12,6 +12,44 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[VoltDB Command Logging Quirks]]></title>
+    <link href="http://benmmurphy.github.com/blog/2018/06/07/voltdb-command-logging-quirks/"/>
+    <updated>2018-06-07T10:32:09+01:00</updated>
+    <id>http://benmmurphy.github.com/blog/2018/06/07/voltdb-command-logging-quirks</id>
+    <content type="html"><![CDATA[<p>Since the <a href="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/">last post</a> on fsync and
+non-durable reads we have had a play around with VoltDB too see if our
+speculation with how synchronous command logging works would be consistent
+with it&rsquo;s performance.</p>
+
+<p>The first thing we noticed is that read-only transactions wait for the log
+interval even if there are no previous write transactions waiting for their
+command log to be synced to disk. You can observe this by setting log frequency
+to 5000ms (the maximum) and using synchronous logging. Then if you run an
+ad-hoc select statement from sqlcmd you will notice that it sometimes takes
+the full 5 seconds to return a result. It is important to note read-only
+transaction will not wait for a disc sync if there is only read only transactions
+in the command log buffer. But even without the sync some read only transactions
+will be unecessarily be delayed because they wait for the command log to be
+flushed. I have a LD_PRELOAD module that would delay
+synchronization by 1 second and I never observed a read-only transaction taking
+more than 5 seconds to return a result. However, if there are write transactions
+in the buffer then the read-only transaction will wait for the command log to be
+synchronised (presumably the data from the read-only transaction isn&rsquo;t actually
+written). This waiting for previous write transactions to sync to disk prevents
+the non-durable read problem discussed in the previous post.</p>
+
+<p>It is kind of weird that VoltDB unecessarily stalls some read transactions but
+this is probably not a big deal with real workloads because frequency will be
+set to 1ms and most workloads are a mix of read and writes and writes will
+always cause the command log to be synchronised.</p>
+
+<p>Here are some links from VoltDB that explain how command logging
+<a href="https://docs.voltdb.com/UsingVoltDB/ChapCmdLog.php">works</a> and can be
+<a href="https://docs.voltdb.com/UsingVoltDB/CmdLogConfig.php">configured for optimal performance</a>.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[FSync DB Lock Contention]]></title>
