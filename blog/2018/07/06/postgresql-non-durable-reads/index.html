@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>DTrace Division by Zero - Ben's Blog</title>
+  <title>Postgresql Non-Durable Reads - Ben's Blog</title>
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="For some background check John Regehr&rsquo;s excellent post on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter &hellip;">
+  <meta name="description" content="This is an experiment where we try to find out how much faster Postgres will run
+if patch it to support non-durable reads. Postgresql supports a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero">
+  <link rel="canonical" href="http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <script src="/javascripts/modernizr-2.0.js"></script>
@@ -79,7 +80,7 @@
   
   <header>
     
-      <h1 class="entry-title">DTrace Division by Zero</h1>
+      <h1 class="entry-title">Postgresql Non-Durable Reads</h1>
     
     
       <p class="meta">
@@ -95,22 +96,69 @@
   
 
 
-<time datetime="2017-03-07T19:55:03+10:00" pubdate data-updated="true"></time>
+<time datetime="2018-07-06T14:29:46+10:00" pubdate data-updated="true"></time>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>For some background check John Regehr&rsquo;s <a href="http://blog.regehr.org/archives/887">excellent post</a> on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter that runs inside the kernel on both Illumos and OSX. Before it was <a href="https://github.com/joyent/illumos-joyent/commit/8a5ff7873220bd2725876b6ef7fdd2bceff60dd3">patched</a> in Illumos it was possible to create an expression to divide INT_MIN by -1 and this would cause the kernel to crash.</p>
+<div class="entry-content"><p>This is an experiment where we try to find out how much faster Postgres will run
+if patch it to support non-durable reads. Postgresql supports a number of
+options when commiting but the ones we are interested in at the moment are
+<code>synchronous_commit = on</code> and <code>synchronous_commit = off</code>. When it is set to <code>on</code>
+Postgresql will wait until the WAL is properly synchronized to the disk before
+returning to the client and when it is <code>off</code> it will not wait at all. Also,
+when it is <code>on</code> postgresql will not release any locks or make any tuples visible
+to other transactions until the WAL is synchronized to disk. This means if you
+have heavy write contention on a particular row then all of your connections
+can end up being serialized around fsync().</p>
+
+<p>For example take this query:</p>
 
 <figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v/-1)}'
-</span><span class='line'>sudo dtrace -n 'BEGIN{v = 0x8000000000000000LL; print((long)v%-1)}'</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class=''><span class='line'>UPDATE counters set counter = counter + 1 where id = 0;</span></code></pre></td></tr></table></div></figure>
 
 
-<p>This is still an issue in OSX. I emailed them a month ago along with links to other DTrace issues that have been fixed in Illumos and not OSX and haven&rsquo;t heard back. Since this is not really a security issue I&rsquo;m posting it here. You need root in order to trigger the DTrace division by zero and if you have root you can already reboot the machine :/. You also need root to trigger all of the other issues.</p>
+<p>If you run this using pg_bench and 128 clients on Macbook Air with
+<code>wal_sync_method = fsync</code> and <code>synchronous_commit = on</code> you will get around
+1283 transaction/s. This is with an fsync cost of about 0.2 ms. If you
+change <code>wal_sync_method = fsync_writethrough</code> this increases the fsync cost
+to about 10ms and the throughput will drop to around 90 transaction/s. If you
+switch <code>synchronous_commit = off</code> this will increase perforamnce and you will
+get around 2611 transaction/s. However, this is kind of unsafe and you might
+lose transactions that you think have been committed if you have a sudden loss
+of power.</p>
+
+<p>Now, we have made a change to postgresql to drop its locks and record the
+transaction as visible and then wait for the WAL log to be synchronised to disk.
+This gives you similar guarantees to <code>synchronous_commit = on</code> and similar
+performance to <code>synchronous_commit = off</code> when there is high contention. When,
+there is low contention it has similar performance to <code>synchronous_commit = on</code>.</p>
+
+<p>After, this change we get 3321 transactions/s which is about 2.5 times better
+performance that <code>synchronous_commit = on</code> and suspiciously even higher
+than <code>synchronous_commit = off</code>. Currently, I don&rsquo;t have an explanation for this
+and it would seem to indicate that there is an implementation error in the
+patch. (Definitely, do no trust this patch with real data this is currently just
+an experiment.) I would expect that this new mode would perform strictly worse
+than <code>synchronous_commit = off</code>.</p>
+
+<p>It also important to note that using this setting
+<code>sychronous_commit = local_non_durable_reads</code> will produce read anomalies that
+can be similar to the write anomalies you get with <code>sychronous_commit = off</code>.
+For example if you insert an tuple and it fails with a unique check then you
+later try to read that tuple then it is possible it won&rsquo;t be there anymore
+because the original write was not durable when the read was performed for the
+unique check. But for this counter example it is 100% safe as long as you never
+try to read the value of the counter :)</p>
+
+<p>If there is any interest in this I might try to upstream the patch into PG. I&rsquo;m
+just not sure if there are people running with high enough contention and high
+enough fsync times to make this setting useful.</p>
+
+<p><a href="https://github.com/postgres/postgres/compare/master...benmmurphy:non_durable_reads">NonDurableReadPatch</a>
+<a href="https://gist.github.com/benmmurphy/49e83da3f8b0793627e4a02e0d154c82">Benchmarks</a></p>
 </div>
 
 
@@ -133,7 +181,7 @@
   
 
 
-<time datetime="2017-03-07T19:55:03+10:00" pubdate data-updated="true"></time>
+<time datetime="2018-07-06T14:29:46+10:00" pubdate data-updated="true"></time>
       
 
 
@@ -141,7 +189,7 @@
     
       <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/" >Tweet</a>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/" data-via="benmmurphy" data-counturl="http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -154,10 +202,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/" title="Previous Post: Local Privilege Escalation in Illumos via /proc">&laquo; Local Privilege Escalation in Illumos via /proc</a>
+        <a class="basic-alignment left" href="/blog/2018/06/07/voltdb-command-logging-quirks/" title="Previous Post: VoltDB Command Logging Quirks">&laquo; VoltDB Command Logging Quirks</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/" title="Next Post: Avalon Fonix/Grabyo Meta Snapshot">Avalon Fonix/Grabyo Meta Snapshot &raquo;</a>
       
     </p>
   </footer>
@@ -223,8 +269,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/';
-        var disqus_url = 'http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/';
+        var disqus_identifier = 'http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/';
+        var disqus_url = 'http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/';
         var disqus_script = 'embed.js';
       
     (function () {

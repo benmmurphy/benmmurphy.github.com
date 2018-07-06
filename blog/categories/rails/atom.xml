@@ -4,7 +4,7 @@
   <title><![CDATA[Category: rails | Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/blog/categories/rails/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2018-06-07T10:56:56+01:00</updated>
+  <updated>2018-07-06T15:11:02+10:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Abusing Dynamic Types For Fun And Profit]]></title>
     <link href="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/"/>
-    <updated>2012-05-15T11:39:00+01:00</updated>
+    <updated>2012-05-15T11:39:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit</id>
     <content type="html"><![CDATA[<p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
 

@@ -4,7 +4,7 @@
   <title><![CDATA[Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2018-06-07T10:56:56+01:00</updated>
+  <updated>2018-07-06T15:11:02+10:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -14,9 +14,73 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Postgresql Non-Durable Reads]]></title>
+    <link href="http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/"/>
+    <updated>2018-07-06T14:29:46+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads</id>
+    <content type="html"><![CDATA[<p>This is an experiment where we try to find out how much faster Postgres will run
+if patch it to support non-durable reads. Postgresql supports a number of
+options when commiting but the ones we are interested in at the moment are
+<code>synchronous_commit = on</code> and <code>synchronous_commit = off</code>. When it is set to <code>on</code>
+Postgresql will wait until the WAL is properly synchronized to the disk before
+returning to the client and when it is <code>off</code> it will not wait at all. Also,
+when it is <code>on</code> postgresql will not release any locks or make any tuples visible
+to other transactions until the WAL is synchronized to disk. This means if you
+have heavy write contention on a particular row then all of your connections
+can end up being serialized around fsync().</p>
+
+<p>For example take this query:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>UPDATE counters set counter = counter + 1 where id = 0;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you run this using pg_bench and 128 clients on Macbook Air with
+<code>wal_sync_method = fsync</code> and <code>synchronous_commit = on</code> you will get around
+1283 transaction/s. This is with an fsync cost of about 0.2 ms. If you
+change <code>wal_sync_method = fsync_writethrough</code> this increases the fsync cost
+to about 10ms and the throughput will drop to around 90 transaction/s. If you
+switch <code>synchronous_commit = off</code> this will increase perforamnce and you will
+get around 2611 transaction/s. However, this is kind of unsafe and you might
+lose transactions that you think have been committed if you have a sudden loss
+of power.</p>
+
+<p>Now, we have made a change to postgresql to drop its locks and record the
+transaction as visible and then wait for the WAL log to be synchronised to disk.
+This gives you similar guarantees to <code>synchronous_commit = on</code> and similar
+performance to <code>synchronous_commit = off</code> when there is high contention. When,
+there is low contention it has similar performance to <code>synchronous_commit = on</code>.</p>
+
+<p>After, this change we get 3321 transactions/s which is about 2.5 times better
+performance that <code>synchronous_commit = on</code> and suspiciously even higher
+than <code>synchronous_commit = off</code>. Currently, I don&rsquo;t have an explanation for this
+and it would seem to indicate that there is an implementation error in the
+patch. (Definitely, do no trust this patch with real data this is currently just
+an experiment.) I would expect that this new mode would perform strictly worse
+than <code>synchronous_commit = off</code>.</p>
+
+<p>It also important to note that using this setting
+<code>sychronous_commit = local_non_durable_reads</code> will produce read anomalies that
+can be similar to the write anomalies you get with <code>sychronous_commit = off</code>.
+For example if you insert an tuple and it fails with a unique check then you
+later try to read that tuple then it is possible it won&rsquo;t be there anymore
+because the original write was not durable when the read was performed for the
+unique check. But for this counter example it is 100% safe as long as you never
+try to read the value of the counter :)</p>
+
+<p>If there is any interest in this I might try to upstream the patch into PG. I&rsquo;m
+just not sure if there are people running with high enough contention and high
+enough fsync times to make this setting useful.</p>
+
+<p><a href="https://github.com/postgres/postgres/compare/master...benmmurphy:non_durable_reads">NonDurableReadPatch</a>
+<a href="https://gist.github.com/benmmurphy/49e83da3f8b0793627e4a02e0d154c82">Benchmarks</a></p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[VoltDB Command Logging Quirks]]></title>
     <link href="http://benmmurphy.github.com/blog/2018/06/07/voltdb-command-logging-quirks/"/>
-    <updated>2018-06-07T10:32:09+01:00</updated>
+    <updated>2018-06-07T19:32:09+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2018/06/07/voltdb-command-logging-quirks</id>
     <content type="html"><![CDATA[<p>Since the <a href="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/">last post</a> on fsync and
 non-durable reads we have had a play around with VoltDB too see if our
@@ -53,9 +117,9 @@ always cause the command log to be synchronised.</p>
   
   <entry>
     <title type="html"><![CDATA[FSync DB Lock Contention]]></title>
-    <link href="http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/"/>
-    <updated>2018-06-01T19:46:30+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention</id>
+    <link href="http://benmmurphy.github.com/blog/2018/06/02/fsync-db-lock-contention/"/>
+    <updated>2018-06-02T04:46:30+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2018/06/02/fsync-db-lock-contention</id>
     <content type="html"><![CDATA[<p>Lets say you have a table in a database that you are using to keep track of a
 counter value. So something like:</p>
 
@@ -207,9 +271,9 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
   <entry>
     <title type="html"><![CDATA[Mechanically Solving Avalon]]></title>
-    <link href="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/"/>
-    <updated>2017-08-08T21:48:48+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon</id>
+    <link href="http://benmmurphy.github.com/blog/2017/08/09/mechanically-solving-avalon/"/>
+    <updated>2017-08-09T06:48:48+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/09/mechanically-solving-avalon</id>
     <content type="html"><![CDATA[<p>I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always achieve victory. To simplify things this post will focus on finding an optimal strategy for 5 person Avalon when the Merlin(Commander) and the Assassin are both in play. It is important to note in this variant the &lsquo;good&rsquo; team at best can only win on average 2/3 of games because the &lsquo;evil&rsquo; team can always randomly pick the Merlin at the end of the game and will guess correctly 1 in 3 times. This question has also been answered before on <a href="https://boardgames.stackexchange.com/questions/20476/solution-to-avalon-board-game">stackexchange</a> but we will try and answer it without crypto. But we will use something very similar to crypto and similar strategies so I&rsquo;m not sure if we are adding anything useful.</p>
 
 <p>The 5 person Avalon game is interesting because there are only 2 &lsquo;evil&rsquo; and 3 &lsquo;good&rsquo; people. This creates an easy mechanism to solve the game.</p>
@@ -246,9 +310,9 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
   <entry>
     <title type="html"><![CDATA[Avalon Fonix/Grabyo Meta Snapshot]]></title>
-    <link href="http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/"/>
-    <updated>2017-08-08T21:41:33+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot</id>
+    <link href="http://benmmurphy.github.com/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/"/>
+    <updated>2017-08-09T06:41:33+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot</id>
     <content type="html"><![CDATA[<p>For those that don&rsquo;t know <a href="https://boardgamegeek.com/boardgame/128882/resistance-avalon">Avalon</a> (or <a href="https://boardgamegeek.com/boardgame/41114/resistance">The Resistance</a>) is a board game where a &lsquo;good&rsquo; team which consist of the majority of players attempt to pass 3 missions while an &lsquo;evil&rsquo; team which consist of a minority of the players try to sabotage them. The &lsquo;evil&rsquo; team achieves this objective by convincing the other players to put them on missions and then failing the missions. The &lsquo;evil&rsquo; team is in a better position to do this because they know who all the other &lsquo;evil&rsquo; players are and can coordinate their voting or influence discussions to achieve their objective. On the other hand the &lsquo;good&rsquo; team is generally in the dark about the identity of the other players except for a few important exceptions.</p>
 
 <p>We generally play 10 players with the Commander (Merlin), Bodyguard (Percival), Deep Cover (Mordred) and False Commander (Morgana) characters. The Commander knows who all the evil characters are except for Deep Cover. The Bodyguard knows who the Commander and False Commander is but doesn&rsquo;t know which is which. We also use the Lady of the Lake which allows its holder after the second round to find out which team another play is on privately. The person being interrogtated cannot lie but the person receiving the information can lie or tell the truth to the rest of the table. The Lady of the Lake token then passes to the player that was interrogated and they get an opportuntity to use it on the next round and so forth. We also sometimes play only vanilla resistance without characters but with plot cards.</p>
@@ -264,7 +328,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   <entry>
     <title type="html"><![CDATA[DTrace Division by Zero]]></title>
     <link href="http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/"/>
-    <updated>2017-03-07T09:55:03+00:00</updated>
+    <updated>2017-03-07T19:55:03+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero</id>
     <content type="html"><![CDATA[<p>For some background check John Regehr&rsquo;s <a href="http://blog.regehr.org/archives/887">excellent post</a> on the history of problems caused by dividing INT_MIN by -1. DTrace is an interpreter that runs inside the kernel on both Illumos and OSX. Before it was <a href="https://github.com/joyent/illumos-joyent/commit/8a5ff7873220bd2725876b6ef7fdd2bceff60dd3">patched</a> in Illumos it was possible to create an expression to divide INT_MIN by -1 and this would cause the kernel to crash.</p>
 
@@ -281,7 +345,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   <entry>
     <title type="html"><![CDATA[Local Privilege Escalation in Illumos via /proc]]></title>
     <link href="http://benmmurphy.github.com/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/"/>
-    <updated>2017-01-31T09:00:00+00:00</updated>
+    <updated>2017-01-31T19:00:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc</id>
     <content type="html"><![CDATA[<p>The /proc permissions in Illumos were optional. I&rsquo;m not sure how long this has been an issue but looking at the <a href="https://github.com/joyent/illumos-joyent/commits/fee52838cd1191a3efe83b67de7bccdd401af35e/usr/src/uts/common/fs/proc/prvnops.c">history</a> of the files associated with the permission check I could not find where the problem was introduced. I checked if this was also an issue in Solaris but this had been fixed in Solaris. However, I could not find the CVE associated with this fix. My suspicion is that this has been an issue prior to the Illumos fork and was found by Solaris engineers and fixed in Solaris but not fixed in Illumos.</p>
 
@@ -451,9 +515,9 @@ parent bash process because we have a subset of permissions.</p>
   
   <entry>
     <title type="html"><![CDATA[Arbitrary Kernel Memory Reads on Illumos]]></title>
-    <link href="http://benmmurphy.github.com/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos/"/>
-    <updated>2017-01-06T21:02:05+00:00</updated>
-    <id>http://benmmurphy.github.com/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos</id>
+    <link href="http://benmmurphy.github.com/blog/2017/01/07/arbitrary-kernel-memory-reads-on-illumos/"/>
+    <updated>2017-01-07T07:02:05+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/01/07/arbitrary-kernel-memory-reads-on-illumos</id>
     <content type="html"><![CDATA[<p>Illumos is the name of the operating system that was forked from OpenSolaris and is being used to power Joyent&rsquo;s <a href="https://www.joyent.com/triton">Triton</a> cloud platform. Joyent have their own branded version of Illumos called SmartOS. Joyent&rsquo;s cloud is interesting because they offer hosting using Zones where customers share the same kernel. This is in contrast to traditional cloud providers who provide isolation between customers using virtual machines. However, it seems that kernel provided isolation is becoming more popular. Looking at AWS Lambda it appears that Linux kernel namespaces are being used to provide isolation. Because the kernel is used to provide isolation it means the whole of the kernel becomes an attack surface. This is especially interesting in the case of Illumos because Illumos runs an interpreter inside the kernel called DTrace which is one of the big selling points of Triton.</p>
 
 <p>DTrace is an incredibly complex piece of code and it consists of more than 17k lines of C code. It is very difficult to write this amount of C code without introducing lots of bugs :( During my review of the DTrace source code I stumbled across two integer overflows and an out of bound read that could be converted to arbitrary kernel writes. I also found five bugs that could be used for arbitrary memory reads. I find exploitation of these arbitrary memory reads more interesting than the privilege escalation bugs so I&rsquo;m going to write about four of these first. I intend to write up the other bugs but these were disclosed starting from September 2015 so don&rsquo;t hold your breath.</p>
@@ -785,7 +849,7 @@ all the other bytes having an unknown result (647).</p>
   <entry>
     <title type="html"><![CDATA[Rails Webconsole DNS Rebinding]]></title>
     <link href="http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/"/>
-    <updated>2016-07-11T09:00:00+01:00</updated>
+    <updated>2016-07-11T18:00:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding</id>
     <content type="html"><![CDATA[<p>The webconsole gem which ships with the Rails development server allows remote code execution via DNS Rebinding. I reported this issue to Rails on April 20th 2015. However, it may have been reported to them earlier because Homakov also found the issue independently and tweeted about it here:</p>
 
@@ -837,7 +901,7 @@ all the other bytes having an unknown result (647).</p>
   <entry>
     <title type="html"><![CDATA[ZDI-13-XXX (2013) Java Sandbox Bypass (1.7.0_10) / (1.6.0_38) via Proxy and JMX]]></title>
     <link href="http://benmmurphy.github.com/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/"/>
-    <updated>2015-11-09T10:41:00+00:00</updated>
+    <updated>2015-11-09T10:41:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx</id>
     <content type="html"><![CDATA[<p>This is part of a series of posts detailing Java Sandbox Bypasses that were disclosed
 between 2012-2013. You can view the other bugs by going back to the <a href="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">original post</a>.</p>
@@ -1033,7 +1097,7 @@ class loader.</p>
   <entry>
     <title type="html"><![CDATA[ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream]]></title>
     <link href="http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/"/>
-    <updated>2015-10-23T17:35:00+01:00</updated>
+    <updated>2015-10-23T17:35:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream</id>
     <content type="html"><![CDATA[<p>This is part of a series of posts detailing Java Sandbox Bypasses that were disclosed
 between 2012-2013. You can view the other bugs by going back to the <a href="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">original post</a>.</p>
@@ -1444,7 +1508,7 @@ say some stuff and run calc.exe.</p>
   <entry>
     <title type="html"><![CDATA[ZDI-13-075 (2013) Java 1.7.0_09 Sandbox Bypass Via ConcurrentHashMap]]></title>
     <link href="http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/"/>
-    <updated>2015-10-21T10:35:00+01:00</updated>
+    <updated>2015-10-21T10:35:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass</id>
     <content type="html"><![CDATA[<p>I&rsquo;ve decided to publish the write ups for some of the Java Sandbox bypasses I disclosed to ZDI between 2012 and 2013. In total I believe
 there were 20 vulnerabilities:</p>
@@ -1563,7 +1627,7 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
   <entry>
     <title type="html"><![CDATA[Redis Hot Patch]]></title>
     <link href="http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/"/>
-    <updated>2015-06-09T09:53:00+01:00</updated>
+    <updated>2015-06-09T09:53:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch</id>
     <content type="html"><![CDATA[<div class='embed tweet'><blockquote class="twitter-tweet"><p lang="en" dir="ltr">If we can use the Redis Lua scripting vulnerability to hot-patch it, the circle is closed and I can change business.</p>&mdash; Salvatore Sanfilippo (@antirez) <a href="https://twitter.com/antirez/status/606440338102689792">June 4, 2015</a></blockquote>
 <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script></div>
@@ -4243,7 +4307,7 @@ summary:     7036559: ConcurrentHashMap footprint and contention improvements
   <entry>
     <title type="html"><![CDATA[Redis EVAL Lua Sandbox Escape]]></title>
     <link href="http://benmmurphy.github.com/blog/2015/06/04/redis-eval-lua-sandbox-escape/"/>
-    <updated>2015-06-04T09:52:00+01:00</updated>
+    <updated>2015-06-04T09:52:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2015/06/04/redis-eval-lua-sandbox-escape</id>
     <content type="html"><![CDATA[<p>It is possible to break out of the Lua sandbox in Redis and execute arbitrary
 code. This vulnerability is not new and is heavily based on
@@ -4428,7 +4492,7 @@ authentication on Redis systems.</p>
   <entry>
     <title type="html"><![CDATA[Riak Drive by Attack]]></title>
     <link href="http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/"/>
-    <updated>2013-09-01T21:29:00+01:00</updated>
+    <updated>2013-09-01T21:29:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack</id>
     <content type="html"><![CDATA[<h2>Be careful with Riak HTTP API (CVE-2012-3586)</h2>
 
@@ -4516,7 +4580,7 @@ authentication on Redis systems.</p>
   <entry>
     <title type="html"><![CDATA[Abusing Dynamic Types For Fun And Profit]]></title>
     <link href="http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/"/>
-    <updated>2012-05-15T11:39:00+01:00</updated>
+    <updated>2012-05-15T11:39:00+10:00</updated>
     <id>http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit</id>
     <content type="html"><![CDATA[<p>Most Rails applications don&rsquo;t properly sanitise user input when passing it to queries (UPDATE: Rails has fixed the problems raised in this article so it was mostly a Rails problem rather than an application programmer problem). I&rsquo;m going to use an example to illustrate this problem.</p>
 

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: avalon | Ben's Blog]]></title>
   <link href="http://benmmurphy.github.com/blog/categories/avalon/atom.xml" rel="self"/>
   <link href="http://benmmurphy.github.com/"/>
-  <updated>2018-06-07T10:56:56+01:00</updated>
+  <updated>2018-07-06T15:11:02+10:00</updated>
   <id>http://benmmurphy.github.com/</id>
   <author>
     <name><![CDATA[Ben Murphy]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Mechanically Solving Avalon]]></title>
-    <link href="http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/"/>
-    <updated>2017-08-08T21:48:48+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon</id>
+    <link href="http://benmmurphy.github.com/blog/2017/08/09/mechanically-solving-avalon/"/>
+    <updated>2017-08-09T06:48:48+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/09/mechanically-solving-avalon</id>
     <content type="html"><![CDATA[<p>I&rsquo;ve been thinking for a while if it is possible for the &lsquo;good&rsquo; team in Avalon to follow some optimal strategy that would always achieve victory. To simplify things this post will focus on finding an optimal strategy for 5 person Avalon when the Merlin(Commander) and the Assassin are both in play. It is important to note in this variant the &lsquo;good&rsquo; team at best can only win on average 2/3 of games because the &lsquo;evil&rsquo; team can always randomly pick the Merlin at the end of the game and will guess correctly 1 in 3 times. This question has also been answered before on <a href="https://boardgames.stackexchange.com/questions/20476/solution-to-avalon-board-game">stackexchange</a> but we will try and answer it without crypto. But we will use something very similar to crypto and similar strategies so I&rsquo;m not sure if we are adding anything useful.</p>
 
 <p>The 5 person Avalon game is interesting because there are only 2 &lsquo;evil&rsquo; and 3 &lsquo;good&rsquo; people. This creates an easy mechanism to solve the game.</p>
@@ -54,9 +54,9 @@
   
   <entry>
     <title type="html"><![CDATA[Avalon Fonix/Grabyo Meta Snapshot]]></title>
-    <link href="http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/"/>
-    <updated>2017-08-08T21:41:33+01:00</updated>
-    <id>http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot</id>
+    <link href="http://benmmurphy.github.com/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/"/>
+    <updated>2017-08-09T06:41:33+10:00</updated>
+    <id>http://benmmurphy.github.com/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot</id>
     <content type="html"><![CDATA[<p>For those that don&rsquo;t know <a href="https://boardgamegeek.com/boardgame/128882/resistance-avalon">Avalon</a> (or <a href="https://boardgamegeek.com/boardgame/41114/resistance">The Resistance</a>) is a board game where a &lsquo;good&rsquo; team which consist of the majority of players attempt to pass 3 missions while an &lsquo;evil&rsquo; team which consist of a minority of the players try to sabotage them. The &lsquo;evil&rsquo; team achieves this objective by convincing the other players to put them on missions and then failing the missions. The &lsquo;evil&rsquo; team is in a better position to do this because they know who all the other &lsquo;evil&rsquo; players are and can coordinate their voting or influence discussions to achieve their objective. On the other hand the &lsquo;good&rsquo; team is generally in the dark about the identity of the other players except for a few important exceptions.</p>
 
 <p>We generally play 10 players with the Commander (Merlin), Bodyguard (Percival), Deep Cover (Mordred) and False Commander (Morgana) characters. The Commander knows who all the evil characters are except for Deep Cover. The Bodyguard knows who the Commander and False Commander is but doesn&rsquo;t know which is which. We also use the Lady of the Lake which allows its holder after the second round to find out which team another play is on privately. The person being interrogtated cannot lie but the person receiving the information can lie or tell the truth to the rest of the table. The Lady of the Lake token then passes to the player that was interrogated and they get an opportuntity to use it on the next round and so forth. We also sometimes play only vanilla resistance without characters but with plot cards.</p>

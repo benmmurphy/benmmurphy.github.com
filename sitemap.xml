@@ -1,64 +1,68 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>http://benmmurphy.github.com/blog/2018/07/06/postgresql-non-durable-reads/</loc>
+    <lastmod>2018-07-06T14:29:46+10:00</lastmod>
+  </url>
+  <url>
     <loc>http://benmmurphy.github.com/blog/2018/06/07/voltdb-command-logging-quirks/</loc>
-    <lastmod>2018-06-07T10:32:09+01:00</lastmod>
+    <lastmod>2018-06-07T19:32:09+10:00</lastmod>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/blog/2018/06/01/fsync-db-lock-contention/</loc>
-    <lastmod>2018-06-01T19:46:30+01:00</lastmod>
+    <loc>http://benmmurphy.github.com/blog/2018/06/02/fsync-db-lock-contention/</loc>
+    <lastmod>2018-06-02T04:46:30+10:00</lastmod>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/blog/2017/08/08/mechanically-solving-avalon/</loc>
-    <lastmod>2017-08-08T21:48:48+01:00</lastmod>
+    <loc>http://benmmurphy.github.com/blog/2017/08/09/mechanically-solving-avalon/</loc>
+    <lastmod>2017-08-09T06:48:48+10:00</lastmod>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/</loc>
-    <lastmod>2017-08-08T21:41:33+01:00</lastmod>
+    <loc>http://benmmurphy.github.com/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/</loc>
+    <lastmod>2017-08-09T06:41:33+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2017/03/07/dtrace-division-by-zero/</loc>
-    <lastmod>2017-03-07T09:55:03+00:00</lastmod>
+    <lastmod>2017-03-07T19:55:03+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2017/01/31/local-privilege-escalation-in-illumos-via-slash-proc/</loc>
-    <lastmod>2017-01-31T09:00:00+00:00</lastmod>
+    <lastmod>2017-01-31T19:00:00+10:00</lastmod>
   </url>
   <url>
-    <loc>http://benmmurphy.github.com/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos/</loc>
-    <lastmod>2017-01-06T21:02:05+00:00</lastmod>
+    <loc>http://benmmurphy.github.com/blog/2017/01/07/arbitrary-kernel-memory-reads-on-illumos/</loc>
+    <lastmod>2017-01-07T07:02:05+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2016/07/11/rails-webconsole-dns-rebinding/</loc>
-    <lastmod>2016-07-11T09:00:00+01:00</lastmod>
+    <lastmod>2016-07-11T18:00:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2015/11/09/zdi-13-XXX-java-sandbox-bypass-1-dot-7-0-10-slash-1-dot-6-0-38-via-proxy-and-jmx/</loc>
-    <lastmod>2015-11-09T10:41:00+00:00</lastmod>
+    <lastmod>2015-11-09T10:41:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/</loc>
-    <lastmod>2015-10-23T17:35:00+01:00</lastmod>
+    <lastmod>2015-10-23T17:35:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass/</loc>
-    <lastmod>2015-10-21T10:35:00+01:00</lastmod>
+    <lastmod>2015-10-21T10:35:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2015/06/09/redis-hot-patch/</loc>
-    <lastmod>2015-06-09T09:53:00+01:00</lastmod>
+    <lastmod>2015-06-09T09:53:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2015/06/04/redis-eval-lua-sandbox-escape/</loc>
-    <lastmod>2015-06-04T09:52:00+01:00</lastmod>
+    <lastmod>2015-06-04T09:52:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2013/09/01/riak-drive-by-attack/</loc>
-    <lastmod>2013-09-01T21:29:00+01:00</lastmod>
+    <lastmod>2013-09-01T21:29:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/2012/05/15/abusing-dynamic-types-for-fun-and-profit/</loc>
-    <lastmod>2012-05-15T11:39:00+01:00</lastmod>
+    <lastmod>2012-05-15T11:39:00+10:00</lastmod>
   </url>
   <url>
     <loc>http://benmmurphy.github.com/</loc>
@@ -74,5 +78,8 @@
   </url>
   <url>
     <loc>http://benmmurphy.github.com/blog/categories/avalon/</loc>
+  </url>
+  <url>
+    <loc>http://benmmurphy.github.com/posts/2/</loc>
   </url>
 </urlset>

